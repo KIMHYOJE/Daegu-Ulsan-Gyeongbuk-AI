@@ -212,12 +212,12 @@ const EX=[
 "[사업자등록증]\n상호: 가상상사\n사업자등록번호: 123-45-67890\n사업장 소재지: 대구광역시 북구 가상로 1\n고객센터: 1588-0000"];
 const M=/[*X●○]/;
 const RULES=[
- {name:"주민등록번호",lvl:"high",re:/\b\d{6}\s?-\s?[1-4][0-9*X●○]{6}\b/g,ctx:/법인등록/},
- {name:"외국인등록번호",lvl:"high",re:/\b\d{6}\s?-\s?[5-8][0-9*X●○]{6}\b/g},
- {name:"여권번호",lvl:"high",re:/\b[MSRGDCP][0-9*X●○]{7,8}\b/g},
+ {name:"주민등록번호",lvl:"high",re:/(?<![0-9])\d{6}\s?-\s?[1-4][0-9*X●○]{6}(?![0-9*X●○])/g,skip:/법인등록/},
+ {name:"외국인등록번호",lvl:"high",re:/(?<![0-9])\d{6}\s?-\s?[5-8][0-9*X●○]{6}(?![0-9*X●○])/g,skip:/법인등록/},
+ {name:"여권번호",lvl:"high",re:/\b[MSRGDCP][0-9*X●○]{7,8}(?![0-9*X●○])/g,need:/여권|passport/i},
  {name:"운전면허번호",lvl:"high",re:/\b\d{2}-\d{2}-\d{6}-\d{2}\b/g},
- {name:"카드번호",lvl:"high",re:/\b\d{4}-[0-9*X●○]{4}-[0-9*X●○]{4}-[0-9*X●○]{4}\b/g},
- {name:"휴대전화번호",lvl:"mid",re:/\b01[016789]-[0-9*X●○]{3,4}-[0-9*X●○]{4}\b/g},
+ {name:"카드번호",lvl:"high",re:/(?<![0-9])\d{4}-[0-9*X●○]{4}-[0-9*X●○]{4}-[0-9*X●○]{4}(?![0-9*X●○])/g},
+ {name:"휴대전화번호",lvl:"mid",re:/(?<![0-9])01[016789]-[0-9*X●○]{3,4}-[0-9*X●○]{4}(?![0-9*X●○])/g},
  {name:"이메일",lvl:"mid",re:/[\w.*]+@[\w.-]+\.[a-z]{2,}/gi},
  {name:"계좌번호",lvl:"mid",re:/계좌[^\n]*?(\d[\d*X●○-]{9,})/g,grp:1},
  {name:"주소",lvl:"mid",re:/(?:^|\n)\s*(?:신청인 |배우자 |본인 )?(?:주소|거주지|체류지)\s*[:：]\s*([^\n]+)/g,grp:1},
@@ -233,7 +233,8 @@ function judge(text,unclear){
     for(const m of text.matchAll(r.re)){
       const v=(r.grp?m[r.grp]:m[0]).trim();
       const line=text.slice(text.lastIndexOf("\n",m.index)+1,text.indexOf("\n",m.index)>-1?text.indexOf("\n",m.index):undefined);
-      if(r.ctx&&r.ctx.test(line))continue;
+      if(r.skip&&r.skip.test(line))continue;
+      if(r.need&&!r.need.test(line))continue;
       if(M.test(v)){masked.push(r.name+": "+v);continue;}
       (exposed[r.name]??=[]).push(v);
     }
@@ -247,6 +248,7 @@ function judge(text,unclear){
   return {level,exposed,masked};
 }
 function render(){
+  if(!document.getElementById("input").value.trim()&&!document.getElementById("unclear").checked){document.getElementById("out").innerHTML='<span class="note">판정할 값을 입력하거나 예시 버튼을 누르세요.</span>';return;}
   const {level,exposed,masked}=judge(document.getElementById("input").value,document.getElementById("unclear").checked);
   const items=Object.entries(exposed);
   let h=`<span class="note">risk_level</span><div class="lvl"><span class="badge ${LV[level]}" style="font-size:24px;padding:4px 16px">${level}</span></div>`;
