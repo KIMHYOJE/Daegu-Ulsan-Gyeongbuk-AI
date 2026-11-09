@@ -35,7 +35,7 @@
     if (kase) {
       const ok1 = kase.risk_level === lvl, ok2 = norm(kase.detected_items) === norm(items), ok3 = kase.data_subject === out.data_subject;
       const m = (b) => (b ? "✅" : "❌");
-      h += `<div class="cmp"><b>정답과 비교 (${esc(kase.set)})</b><br>${m(ok1)} 위험도: 정답 ${esc(kase.risk_level)}<br>${m(ok2)} 노출 항목: 정답 ${esc(kase.detected_items.join(", ") || "없음")}<br>${m(ok3)} 정보 주체: 정답 ${esc(kase.data_subject)}<br><span class="note">${ok1 && ok2 && ok3 ? "세 항목 모두 정답과 같습니다." : "일부가 정답과 다릅니다. 이 페이지는 서식 분리·검증 단계 없이 한 번에 판정하므로 Studio 워크플로우 결과(14/14)와 다를 수 있습니다."}</span></div>`;
+      h += `<div class="cmp"><b>정답과 비교 (${esc(kase.set)})</b><br>${m(ok1)} 위험도: 정답 ${esc(kase.risk_level)}<br>${m(ok2)} 노출 항목: 정답 ${esc(kase.detected_items.join(", ") || "없음")}<br>${m(ok3)} 정보 주체: 정답 ${esc(kase.data_subject)}<br><span class="note">${ok1 && ok2 && ok3 ? "세 항목 모두 정답과 같습니다." : "일부가 정답과 다릅니다. OCR이 일부 칸을 다르게 읽었을 수 있으니 아래 ‘서식별 추출 결과’에서 어느 값이 달랐는지 확인해 보세요."}</span></div>`;
     }
     const docs = Array.isArray(out.documents) ? out.documents : [];
     h += `<details><summary>서식별 추출 결과 보기 (${docs.length}개)</summary><pre class="raw">${esc(JSON.stringify(docs, null, 2))}</pre></details>`;

@@ -35,10 +35,13 @@ a{color:var(--brand)}
 .wrap{max-width:1080px;margin:0 auto;padding:0 16px}
 nav{position:sticky;top:0;z-index:5;background:color-mix(in srgb,var(--bg) 85%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
 nav .wrap{display:flex;gap:18px;align-items:center;height:56px;overflow-x:auto;white-space:nowrap}
-nav b{margin-right:auto;font-weight:900;letter-spacing:.02em}
+nav b{font-weight:900;letter-spacing:.02em}
 nav a{color:var(--muted);text-decoration:none;font-size:14px}
 nav a:hover{color:var(--text)}
-header.hero{background:radial-gradient(120% 140% at 80% 100%,var(--hero-2) 0%,var(--hero-1) 70%);color:#fff;padding:88px 0 72px}
+header.hero{background:radial-gradient(120% 140% at 80% 100%,var(--hero-2) 0%,var(--hero-1) 70%);color:#fff;padding:56px 0 48px}
+.legend{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 0}
+.legend span{font-size:13px}
+nav a.gh{margin-left:auto}
 .pill{display:inline-block;border:1px solid rgba(255,255,255,.45);border-radius:999px;padding:6px 16px;font-size:14px}
 .hero h1{font-size:clamp(32px,6vw,60px);line-height:1.15;margin:20px 0 14px;font-weight:900}
 .hero p{max-width:640px;font-size:18px;opacity:.88;margin:0}
@@ -114,63 +117,18 @@ footer{padding:40px 0;color:var(--muted);font-size:14px}
 </style>
 </head>
 <body>
-<nav><div class="wrap"><b>YOMI CODING</b><a href="#problem">문제</a><a href="#rules">판정 기준</a><a href="#flow">워크플로우</a><a href="#ai">AI 판정</a><a href="#demo">규칙 체험</a><a href="#results">결과</a><a href="#limits">한계</a></div></nav>
+<nav><div class="wrap"><b>YOMI CODING</b><a class="gh" href="https://github.com/KIMHYOJE/Daegu-Ulsan-Gyeongbuk-AI">GitHub</a></div></nav>
 
 <header class="hero"><div class="wrap">
   <span class="pill">IM뱅크 지정주제 · 요미의 코딩</span>
   <h1>금융문서 민감정보<br>위험도 자동 등급화</h1>
-  <p>은행 서류를 밖으로 보내기 전에 가려지지 않은 민감정보를 찾아 고위험·중위험·저위험·검토 필요 4단계로 1차 판정하고, 등급마다 담당자가 할 일을 바로 적어 줍니다.</p>
-  <div class="cta"><a class="go" href="#ai">샘플로 바로 판정하기</a><a class="see" href="#flow">판정 방식 보기</a></div>
-  <div class="stats">
-    <div class="stat"><b>14 / 14</b><span>묶음 정답 일치 (설정 #8·#9)</span></div>
-    <div class="stat"><b>21건</b><span>법정 서식 8종에 가상 값 입력</span></div>
-    <div class="stat"><b>18개</b><span>칸별 추출 항목</span></div>
-    <div class="stat"><b>4단계</b><span>위험도 + 후속 조치</span></div>
-  </div>
+  <p>서류를 올리면 가려지지 않은 민감정보를 찾아 4단계 위험도와 담당자가 할 일을 알려 줍니다.</p>
+  <div class="cta"><a class="go" href="#ai">샘플로 바로 판정하기</a></div>
 </div></header>
 
-<section id="problem"><div class="wrap">
-  <h2>업무 현장의 문제</h2>
-  <p class="lead">개인정보보호 담당자는 서류 묶음을 눈으로 한 칸씩 확인해야 합니다.</p>
-  <div class="grid">
-    <div class="card"><h3>서식이 섞여 옴</h3><p>원천징수영수증, 동의서, 외국인등록사실증명, 재무제표가 한 PDF로 이어져 옵니다.</p></div>
-    <div class="card"><h3>일부만 가린 서류</h3><p>신청자 칸은 가렸는데 배우자 칸 번호가 그대로 남아 나가는 일이 생깁니다.</p></div>
-    <div class="card"><h3>흐린 촬영본</h3><p>휴대폰으로 찍은 서류는 번호를 읽을 수 없어 노출 여부 자체를 판단하기 어렵습니다.</p></div>
-  </div>
-</div></section>
-
-<section id="rules"><div class="wrap">
-  <h2>판정 기준</h2>
-  <div class="principle"><b>Unmasked = Exposed.</b> 마스킹 문자(<code>*</code> <code>X</code> <code>●</code> <code>○</code>)가 하나도 없는 전체 값만 ‘노출’로 셉니다. <code>900101-1******</code>는 노출이 아닙니다.</div>
-  <div class="scroll"><table>
-    <thead><tr><th>확인 순서</th><th>등급</th><th>조건</th><th>후속 조치</th></tr></thead>
-    <tbody>
-      <tr><td>1</td><td><span class="badge b-검토">검토 필요</span></td><td>판독 불가 문서가 있음, 또는 가린 이름 + 회사명·직위·출생연도로 재식별 위험</td><td>담당자 확인 요청</td></tr>
-      <tr><td>2</td><td><span class="badge b-고위험">고위험</span></td><td>주민등록·외국인등록·여권·운전면허·카드번호 중 1개 이상 노출</td><td>발송 차단·보고</td></tr>
-      <tr><td>3</td><td><span class="badge b-중위험">중위험</span></td><td>계좌·휴대전화·주소·이메일·소득·신용·기업재무정보 중 1개 이상 노출</td><td>마스킹 요청</td></tr>
-      <tr><td>4</td><td><span class="badge b-저위험">저위험</span></td><td>노출된 민감정보 0개</td><td>발송 승인 기록</td></tr>
-    </tbody>
-  </table></div>
-  <p class="note">사업자등록번호, 법인등록번호, 회사·사업장 주소, 고객센터 번호, 자본금·주식 수는 공개 정보로 보고 제외합니다.</p>
-</div></section>
-
-<section id="flow"><div class="wrap">
-  <h2>워크플로우</h2>
-  <p class="lead">Upstage AI Studio에서 노드 7개로 구성했습니다.</p>
-  <div class="flow">
-    <div class="step"><small>1 · Parse</small><h4>OCR 강제</h4><p>이미지 PDF도 글자로 읽어 빈 문서로 오판하지 않게 합니다.</p></div>
-    <div class="step"><small>2 · Classify</small><h4>서식 분리</h4><p>개인·법인·공개 문서로 나눠 서식이 섞이지 않게 합니다.</p></div>
-    <div class="step"><small>3 · Extract</small><h4>18개 항목</h4><p>번호·이름·주소를 칸별로, 마스킹 문자는 그대로 뽑습니다.</p></div>
-    <div class="step"><small>4 · Merge</small><h4>묶음 합치기</h4><p>발송 1건 단위로 결과를 모읍니다.</p></div>
-    <div class="step"><small>5 · Validate</small><h4>판독 검증</h4><p>readability가 clear가 아니면 오류로 표시합니다.</p></div>
-    <div class="step"><small>6 · Instruct</small><h4>위험도 판정</h4><p>검토 필요→고→중→저 순서로 한 등급만 냅니다.</p></div>
-    <div class="step"><small>7 · Instruct ×4</small><h4>후속 조치</h4><p>차단 보고 / 마스킹 요청 / 승인 기록 / 확인 요청문.</p></div>
-  </div>
-</div></section>
-
 <section id="ai"><div class="wrap">
-  <h2>AI 판정 실행</h2>
-  <p class="lead">PDF나 사진을 올리면 Upstage <b>Document Parse(OCR)</b>로 읽고, <b>Solar</b>가 Studio 워크플로우와 같은 추출 항목·판정 규칙으로 위험도를 매깁니다.</p>
+  <h2>서류 판정</h2>
+  <p class="lead">PDF나 사진을 Upstage <b>Document Parse(OCR)</b>로 읽고, <b>Solar</b>가 서식마다 번호·이름·주소를 칸별로 뽑은 뒤 정해진 규칙으로 위험도를 매깁니다.</p>
   <div class="sim">
     <div class="card">
       <label class="field">판정할 서류
@@ -181,143 +139,20 @@ footer{padding:40px 0;color:var(--muted);font-size:14px}
       <div class="btns"><button class="primary" id="aiRun">AI로 판정하기</button></div>
       <ol class="steps" id="aiSteps">
         <li data-s="parse">문서 읽기 (Document Parse · OCR)</li>
-        <li data-s="judge">항목 추출 · 위험도 판정 (Solar)</li>
+        <li data-s="judge">칸별 항목 추출 (Solar) · 규칙 판정</li>
       </ol>
+      <div class="legend">
+        <span class="badge b-고위험">고위험 · 발송 차단</span><span class="badge b-중위험">중위험 · 마스킹 요청</span><span class="badge b-저위험">저위험 · 발송 승인</span><span class="badge b-검토">검토 필요 · 담당자 확인</span>
+      </div>
     </div>
     <div class="result" id="aiOut" aria-live="polite"><span class="note">샘플을 고르거나 파일을 올린 뒤 AI로 판정하기를 누르세요. 샘플의 정답은 판정이 끝난 뒤 결과와 함께 보여 줍니다.</span></div>
   </div>
 </div></section>
 
-<section id="demo"><div class="wrap">
-  <h2>판정 규칙 체험</h2>
-  <p class="lead">서류에서 뽑은 값을 붙여 넣으면 같은 판정 규칙을 브라우저에서 적용해 봅니다. 입력은 이 페이지 밖으로 전송되지 않습니다.</p>
-  <div class="sim">
-    <div>
-      <textarea id="input" spellcheck="false" aria-label="판정할 텍스트"></textarea>
-      <div class="btns">
-        <button data-ex="0">예시: 배우자 칸 노출</button>
-        <button data-ex="1">예시: 마스킹 처리본</button>
-        <button data-ex="2">예시: 법인 재무제표</button>
-        <button data-ex="3">예시: 공개 정보만</button>
-      </div>
-      <label class="chk"><input type="checkbox" id="unclear"> 흐려서 읽을 수 없는 칸이 있음 (판독 불가)</label>
-      <div class="btns"><button class="primary" id="run">판정하기</button></div>
-    </div>
-    <div class="result" id="out" aria-live="polite"><span class="note">왼쪽에 값을 넣고 판정하기를 누르세요.</span></div>
-  </div>
-  <p class="note">실제 판정은 AI Studio 워크플로우가 서식을 읽고 내립니다. 이 체험은 판정 기준을 보여 주기 위한 정규식 미리보기이며 모든 경우를 잡지 못합니다. 예시 번호는 모두 가상 값입니다.</p>
-</div></section>
-
-<section id="results"><div class="wrap">
-  <h2>결과</h2>
-  <p class="lead">위험도·노출 항목·정보 주체 세 키가 정답과 모두 같으면 일치로 셉니다.</p>
-  <div class="bars" role="img" aria-label="설정 버전별 정답 일치 묶음 수: #4 11, #5 13, #6 13, #7 13, #8 14, #9 14">
-    <div class="bar"><b>11</b><i style="height:78%"></i><span>#4</span></div>
-    <div class="bar"><b>13</b><i style="height:92%"></i><span>#5</span></div>
-    <div class="bar"><b>13</b><i style="height:92%"></i><span>#6</span></div>
-    <div class="bar"><b>13</b><i style="height:92%"></i><span>#7</span></div>
-    <div class="bar full"><b>14</b><i style="height:100%"></i><span>#8</span></div>
-    <div class="bar full"><b>14</b><i style="height:100%"></i><span>#9</span></div>
-  </div>
-  <div class="grid" style="margin:18px 0 36px">
-    <div class="card"><h3>#5 판독 실패 규칙</h3><p>제목·항목이 모두 비면 ‘노출 없음’ 대신 검토 필요로 판정.</p></div>
-    <div class="card"><h3>#6 모든 쪽 읽기</h3><p>두 서식이 한 범위로 묶여도 모든 쪽을 읽어 번호 누락 방지.</p></div>
-    <div class="card"><h3>#7·#8 자기 점검</h3><p>목록의 값을 하나씩 보고, 실제 값을 인용 못 하면 항목에서 제외.</p></div>
-  </div>
-  <h3>정답 데이터셋 14개 묶음</h3>
-  <div class="filter" id="filter"></div>
-  <div class="scroll"><table>
-    <thead><tr><th>묶음</th><th>서류</th><th>등급</th><th>노출 항목</th><th>근거</th></tr></thead>
-    <tbody id="rows"></tbody>
-  </table></div>
-</div></section>
-
-<section id="limits"><div class="wrap">
-  <h2>한계</h2>
-  <div class="grid">
-    <div class="card"><h3>가상 데이터</h3><p>실제 고객 서류가 아니라 법정 서식에 가상 값을 채운 21건으로 검증했습니다.</p></div>
-    <div class="card"><h3>1차 판정</h3><p>AI 판정은 담당자 확인을 돕는 도구이며, 검토 필요 등급은 사람이 직접 봅니다.</p></div>
-    <div class="card"><h3>분할 설명 미반영</h3><p>Studio 가져오기 과정에서 서식 분할 기준 설명이 빠져, 추출 단계에서 모든 쪽을 읽도록 보완했습니다.</p></div>
-  </div>
-</div></section>
-
-<footer><div class="wrap">요미의 코딩 · 2026 대구·울산·경북 AI Agent 해커톤 · IM뱅크 지정주제</div></footer>
+<footer><div class="wrap">요미의 코딩 · 2026 대구·울산·경북 AI Agent 해커톤 · IM뱅크 지정주제 · 모든 샘플은 법정 서식에 가상 값을 채운 문서입니다.</div></footer>
 
 <script src="cases.js"></script>
 <script src="config.js"></script>
-<script>
-const EX=[
-"[금융정보 등 제공 동의서]\n신청인 성명: 김가상\n신청인 주민등록번호: 850315-1******\n신청인 주소: 대구광역시 ○○구 ****로 **\n배우자 주민등록번호: 870722-2000063\n배우자 휴대전화: 010-0000-5518",
-"[근로소득 원천징수영수증 · 개인정보 마스킹 처리본]\n주민등록번호: 920202-2******\n주소: 경상북도 ○○시 ***길 **\n급여 39,600,000\n상여 3,300,000",
-"[표준재무상태표]\n사업자등록번호: 123-45-67890\n법인등록번호: 110111-0000000\n유동자산 8,215,000,000\n매출액 41,965,000,000",
-"[사업자등록증]\n상호: 가상상사\n사업자등록번호: 123-45-67890\n사업장 소재지: 대구광역시 북구 가상로 1\n고객센터: 1588-0000"];
-const M=/[*X●○]/;
-const RULES=[
- {name:"주민등록번호",lvl:"high",re:/(?<![0-9])\d{6}\s?-\s?[1-4][0-9*X●○]{6}(?![0-9*X●○])/g,skip:/법인등록/},
- {name:"외국인등록번호",lvl:"high",re:/(?<![0-9])\d{6}\s?-\s?[5-8][0-9*X●○]{6}(?![0-9*X●○])/g,skip:/법인등록/},
- {name:"여권번호",lvl:"high",re:/\b[MSRGDCP][0-9*X●○]{7,8}(?![0-9*X●○])/g,need:/여권|passport/i},
- {name:"운전면허번호",lvl:"high",re:/\b\d{2}-\d{2}-\d{6}-\d{2}\b/g},
- {name:"카드번호",lvl:"high",re:/(?<![0-9])\d{4}-[0-9*X●○]{4}-[0-9*X●○]{4}-[0-9*X●○]{4}(?![0-9*X●○])/g},
- {name:"휴대전화번호",lvl:"mid",re:/(?<![0-9])01[016789]-[0-9*X●○]{3,4}-[0-9*X●○]{4}(?![0-9*X●○])/g},
- {name:"이메일",lvl:"mid",re:/[\w.*]+@[\w.-]+\.[a-z]{2,}/gi},
- {name:"계좌번호",lvl:"mid",re:/계좌[^\n]*?(\d[\d*X●○-]{9,})/g,grp:1},
- {name:"주소",lvl:"mid",re:/(?:^|\n)\s*(?:신청인 |배우자 |본인 )?(?:주소|거주지|체류지)\s*[:：]\s*([^\n]+)/g,grp:1},
- {name:"소득정보",lvl:"mid",re:/(?:급여|상여|총급여|연소득|결정세액)\s*[:：]?\s*([\d*X●○,]{5,})/g,grp:1},
- {name:"기업재무정보",lvl:"mid",re:/(?:유동자산|자산총계|부채총계|자본총계|매출액|영업이익|당기순이익|매출원가)\s*[:：]?\s*([\d*X●○,]{5,})/g,grp:1}
-];
-const LV={"고위험":"b-고위험","중위험":"b-중위험","저위험":"b-저위험","검토 필요":"b-검토"};
-const ACT={"고위험":"발송 차단·보고","중위험":"마스킹 요청","저위험":"발송 승인 기록","검토 필요":"담당자 확인 요청"};
-function esc(s){return s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
-function judge(text,unclear){
-  const exposed={},masked=[];
-  for(const r of RULES){
-    for(const m of text.matchAll(r.re)){
-      const v=(r.grp?m[r.grp]:m[0]).trim();
-      const line=text.slice(text.lastIndexOf("\n",m.index)+1,text.indexOf("\n",m.index)>-1?text.indexOf("\n",m.index):undefined);
-      if(r.skip&&r.skip.test(line))continue;
-      if(r.need&&!r.need.test(line))continue;
-      if(M.test(v)){masked.push(r.name+": "+v);continue;}
-      (exposed[r.name]??=[]).push(v);
-    }
-  }
-  const items=Object.keys(exposed);
-  let level;
-  if(unclear) level="검토 필요";
-  else if(items.some(n=>RULES.find(r=>r.name===n).lvl==="high")) level="고위험";
-  else if(items.length) level="중위험";
-  else level="저위험";
-  return {level,exposed,masked};
-}
-function render(){
-  if(!document.getElementById("input").value.trim()&&!document.getElementById("unclear").checked){document.getElementById("out").innerHTML='<span class="note">판정할 값을 입력하거나 예시 버튼을 누르세요.</span>';return;}
-  const {level,exposed,masked}=judge(document.getElementById("input").value,document.getElementById("unclear").checked);
-  const items=Object.entries(exposed);
-  let h=`<span class="note">risk_level</span><div class="lvl"><span class="badge ${LV[level]}" style="font-size:24px;padding:4px 16px">${level}</span></div>`;
-  h+=`<p><b>후속 조치:</b> ${ACT[level]}</p>`;
-  if(level==="검토 필요") h+=`<p class="note">판독 불가 문서가 있어 노출 여부를 확정하지 않고 담당자에게 넘깁니다.</p>`;
-  h+=`<p><b>detected_items</b></p>`+(items.length?`<ul>${items.map(([k,v])=>`<li>${esc(k)} — <code>${esc(v.join(", "))}</code></li>`).join("")}</ul>`:`<p class="note">노출된 항목 없음</p>`);
-  if(masked.length) h+=`<p><b>가려져 노출에서 뺀 값</b></p><ul>${masked.map(m=>`<li><code>${esc(m)}</code></li>`).join("")}</ul>`;
-  document.getElementById("out").innerHTML=h;
-}
-document.querySelectorAll("[data-ex]").forEach(b=>b.onclick=()=>{document.getElementById("input").value=EX[+b.dataset.ex];document.getElementById("unclear").checked=false;render();});
-document.getElementById("run").onclick=render;
-document.getElementById("input").value=EX[0];
-
-// dataset table
-const rows=document.getElementById("rows"),filter=document.getElementById("filter");
-let cur="전체";
-function draw(){
-  rows.innerHTML=(window.CASES||[]).filter(c=>cur==="전체"||c.risk_level===cur).map(c=>
-    `<tr><td><b>${c.id}</b><br><span class="note">${c.set}</span></td><td>${esc(c.docs.join(", "))}</td><td><span class="badge ${LV[c.risk_level]}">${c.risk_level}</span></td><td>${c.detected_items.length?esc(c.detected_items.join(", ")):"—"}</td><td style="min-width:280px">${esc(c.reason)}</td></tr>`).join("");
-}
-["전체","고위험","중위험","저위험","검토 필요"].forEach(k=>{
-  const n=k==="전체"?(window.CASES||[]).length:(window.CASES||[]).filter(c=>c.risk_level===k).length;
-  const b=document.createElement("button");b.textContent=`${k} ${n}`;b.setAttribute("aria-pressed",k===cur);
-  b.onclick=()=>{cur=k;filter.querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x===b));draw();};
-  filter.appendChild(b);
-});
-draw();
-</script>
 <script src="ai.js"></script>
 </body>
 </html>

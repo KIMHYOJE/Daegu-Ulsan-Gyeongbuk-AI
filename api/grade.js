@@ -1,7 +1,9 @@
 // 민감정보 위험도 판정 함수 (Vercel Functions, POST /api/grade · GET /api/grade 는 상태 확인)
-// 사이트에서 받은 파일을 Upstage Document Parse(OCR) → Solar 판정에 넘긴다.
+// 1) Upstage Document Parse(OCR)로 글자를 읽고
+// 2) Solar가 서식마다 18개 항목을 칸별로 추출(Studio Extract 노드와 같은 항목 설명, JSON 스키마 고정)한 뒤
+// 3) 위험도·노출 항목·정보 주체는 Studio 위험도_판정 규칙을 그대로 옮긴 코드가 정한다(같은 입력이면 늘 같은 판정).
 // Upstage 키는 Vercel 환경변수 UPSTAGE_API_KEY에만 있고 브라우저로 나가지 않는다.
-import { JUDGE_SYSTEM } from "./_prompt.js";
+import { EXTRACT_SYSTEM, EXTRACT_SCHEMA } from "./_prompt.js";
 
 const API = "https://api.upstage.ai/v1";
 const MAX_BYTES = 4 * 1024 * 1024; // Vercel 요청 본문 한도(4.5MB) 안쪽
@@ -12,7 +14,6 @@ const hits = new Map();
 const json = (body, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json; charset=utf-8" } });
 
-// 같은 사이트(또는 로컬)에서 온 요청만 받는다
 function sameSite(request) {
   const origin = request.headers.get("origin");
   if (!origin) return false;
@@ -29,13 +30,6 @@ function limited(ip) {
   list.push(now); hits.set(ip, list);
   if (hits.size > 5000) hits.clear();
   return false;
-}
-
-function pickJson(s) {
-  s = s.replace(/```(?:json)?/g, "").trim();
-  const a = s.indexOf("{"), b = s.lastIndexOf("}");
-  if (a < 0 || b < 0) throw new Error("판정 결과에서 JSON을 찾지 못했습니다.");
-  return JSON.parse(s.slice(a, b + 1));
 }
 
 async function upstageError(res, step) {
@@ -66,28 +60,124 @@ async function parseDoc(key, file) {
   return { text, pages: j.usage?.pages ?? keys.length };
 }
 
-async function judge(key, text) {
-  const res = await fetch(`${API}/chat/completions`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: MODEL,
-      temperature: 0,
-      max_tokens: 6000,
-      messages: [
-        { role: "system", content: JUDGE_SYSTEM },
-        { role: "user", content: "다음은 발송할 서류 묶음 1건의 OCR 텍스트다.\n\n" + (text.trim() || "(읽힌 글자 없음)") },
-      ],
-    }),
+function pickJson(s) {
+  s = String(s || "").replace(/```(?:json)?/g, "").trim();
+  const a = s.indexOf("{"), b = s.lastIndexOf("}");
+  if (a < 0 || b < 0) throw new Error("추출 결과에서 JSON을 찾지 못했습니다.");
+  return JSON.parse(s.slice(a, b + 1));
+}
+
+async function extract(key, text) {
+  const body = {
+    model: MODEL,
+    temperature: 0,
+    max_tokens: 8000,
+    messages: [
+      { role: "system", content: EXTRACT_SYSTEM },
+      { role: "user", content: "다음은 발송할 서류 묶음 1건의 OCR 텍스트다. 서식마다 항목을 추출하라.\n\n" + (text.trim() || "(읽힌 글자 없음)") },
+    ],
+    response_format: { type: "json_schema", json_schema: { name: "documents", strict: true, schema: EXTRACT_SCHEMA } },
+  };
+  let res = await fetch(`${API}/chat/completions`, {
+    method: "POST", headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" }, body: JSON.stringify(body),
   });
-  if (!res.ok) throw await upstageError(res, "판정");
+  if (res.status === 400) { // 구조화 출력을 받지 않는 모델이면 일반 JSON 출력으로 다시 요청
+    delete body.response_format;
+    body.messages[0].content += "\n\n[출력] 설명 없이 {\"documents\": [...]} JSON 객체 하나만 출력한다.";
+    res = await fetch(`${API}/chat/completions`, {
+      method: "POST", headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" }, body: JSON.stringify(body),
+    });
+  }
+  if (!res.ok) throw await upstageError(res, "항목 추출");
   const j = await res.json();
   const raw = j.choices?.[0]?.message?.content || "";
-  return { raw, result: pickJson(raw) };
+  const docs = pickJson(raw).documents;
+  return { raw, documents: Array.isArray(docs) ? docs : [] };
+}
+
+// ---- 판정 규칙 (Studio 위험도_판정 노드와 같은 순서·기준) ----
+const MASK = /[*X●○]/;
+const HIGH = [["resident_reg_numbers", "주민등록번호"], ["foreigner_reg_numbers", "외국인등록번호"], ["passport_numbers", "여권번호"], ["driver_license_numbers", "운전면허번호"], ["card_numbers", "카드번호"]];
+const MID = [["account_numbers", "계좌번호"], ["mobile_numbers", "휴대전화번호"], ["personal_addresses", "주소"], ["emails", "이메일"], ["income_values", "소득정보"], ["credit_values", "신용정보"], ["corporate_financials", "기업재무정보"]];
+const ALL = [...HIGH, ...MID];
+const PERSONAL = new Set(["주민등록번호", "외국인등록번호", "여권번호", "운전면허번호", "휴대전화번호", "주소", "이메일", "소득정보", "신용정보"]);
+const arr = (v) => (Array.isArray(v) ? v.map((x) => String(x).trim()).filter(Boolean) : []);
+const shown = (v) => arr(v).filter((x) => !MASK.test(x));   // 마스킹 문자가 하나도 없는 값만 노출
+const masked = (v) => arr(v).filter((x) => MASK.test(x));
+const titleOf = (d) => String(d.document_title || "").trim() || "제목 없는 서식";
+
+function judge(documents) {
+  const docs = documents.map((d) => ({ ...d, title: titleOf(d) }));
+  // 1단계 검토 필요
+  const unreadable = docs.filter((d) => String(d.readability || "").trim().toLowerCase() === "unclear");
+  const emptyRead = docs.filter((d) => {
+    const t = String(d.document_title || "").trim();
+    const noTitle = !t || /^document$/i.test(t);
+    return noTitle && !arr(d.person_names).length && ALL.every(([k]) => !arr(d[k]).length);
+  });
+  const reid = docs.filter((d) => {
+    const names = arr(d.person_names);
+    if (!names.length || names.some((n) => !MASK.test(n))) return false;
+    const q = arr(d.quasi_identifiers).join(" ");
+    return /(19|20)\d{2}|\d+\s*세|년생/.test(q) && /\(주\)|㈜|주식회사|회사|은행|그룹/.test(q) && /부|팀|과장|대리|사원|차장|부장|주임|이사|연구원|직위|직급/.test(q);
+  });
+
+  // 노출 항목 (판독 가능한 문서 기준)
+  const usable = docs.filter((d) => !unreadable.includes(d) && !emptyRead.includes(d));
+  const found = [];  // {item, values, doc, owner}
+  for (const [k, item] of ALL) {
+    for (const d of usable) {
+      const v = shown(d[k]);
+      if (v.length) found.push({ item, values: v, doc: d.title, corp: String(d.owner_type || "").includes("기업") });
+    }
+  }
+  const items = [...new Set(found.map((f) => f.item))];
+  const isHigh = items.some((i) => HIGH.some(([, n]) => n === i));
+
+  let risk;
+  if (unreadable.length || emptyRead.length || reid.length) risk = "검토 필요";
+  else if (isHigh) risk = "고위험";
+  else if (items.length) risk = "중위험";
+  else risk = "저위험";
+
+  // 정보 주체
+  let personal = false, corporate = false;
+  for (const f of found) {
+    if (PERSONAL.has(f.item)) personal = true;
+    else if (f.item === "기업재무정보") corporate = true;
+    else if (f.corp) corporate = true; else personal = true; // 계좌·카드: 법인 서류면 기업
+  }
+  const subject = !items.length ? "없음" : personal && corporate ? "개인·기업" : personal ? "개인" : "기업";
+  const detected = risk === "검토 필요" ? items : items;
+
+  // 판정 근거 (실제 값 인용)
+  // 서식별로 묶어 "서식: 항목 값, 항목 값" 형태로 인용
+  const quoteAll = (list) => {
+    const by = new Map();
+    for (const f of list) (by.get(f.doc) || by.set(f.doc, []).get(f.doc)).push(`${f.item} ${f.values.slice(0, 2).join(", ")}${f.values.length > 2 ? " 외" : ""}`);
+    return [...by].map(([doc, xs]) => `[${doc}] ${xs.slice(0, 3).join(" · ")}`).join(" / ");
+  };
+  let reason;
+  if (risk === "검토 필요") {
+    const why = [];
+    if (unreadable.length) why.push(`${unreadable.map((d) => d.title).join(", ")}은(는) 흐리거나 번호·이름 칸을 읽을 수 없어 노출 여부를 확인할 수 없음`);
+    if (emptyRead.length) why.push(`서식 제목과 번호·이름 칸이 하나도 읽히지 않은 문서가 있어 '노출 없음'으로 볼 수 없음`);
+    if (reid.length) why.push(`${reid.map((d) => d.title).join(", ")}에서 이름은 가렸지만 회사·직위·출생연도가 함께 남아 누구인지 짐작할 수 있음(재식별 위험)`);
+    reason = why.join(". ") + (found.length ? `. 그 밖에 읽힌 문서에서 가려지지 않은 값: ${quoteAll(found)}.` : ".");
+  } else if (found.length) {
+    const top = [...found].sort((a, b) => (HIGH.some(([, n]) => n === b.item) ? 1 : 0) - (HIGH.some(([, n]) => n === a.item) ? 1 : 0));
+    reason = `가려지지 않은 값: ${quoteAll(top)}. ${isHigh ? "고위험 항목(주민·외국인등록·여권·운전면허·카드번호)이 노출되어 고위험" : "고위험 항목은 없고 중위험 항목이 노출되어 중위험"}.`;
+    const hidden = usable.flatMap((d) => ALL.flatMap(([k, item]) => masked(d[k]).slice(0, 1).map((v) => `${item} ${v}`))).slice(0, 2);
+    if (hidden.length) reason += ` ${hidden.join(", ")}처럼 가린 값은 노출로 세지 않음.`;
+  } else {
+    const hidden = usable.flatMap((d) => ALL.flatMap(([k, item]) => masked(d[k]).slice(0, 1).map((v) => `${item} ${v}`))).slice(0, 2);
+    reason = hidden.length ? `민감정보가 모두 가려져 있음(${hidden.join(", ")}). 사업장 주소·사업자등록번호 같은 공개 정보는 제외.` : "가려지지 않은 민감정보가 없음. 사업장 주소·사업자등록번호 같은 공개 정보는 제외.";
+  }
+  return { risk_level: risk, detected_items: detected, data_subject: subject, reason };
 }
 
 export function GET() {
-  return json({ ok: true, keySet: Boolean(process.env.UPSTAGE_API_KEY) });
+  return json({ ok: true, keySet: Boolean(process.env.UPSTAGE_API_KEY), model: MODEL });
 }
 
 export async function POST(request) {
@@ -110,9 +200,12 @@ export async function POST(request) {
   let parsed;
   try {
     parsed = await parseDoc(key, file);
-    const { raw, result } = await judge(key, parsed.text);
+    const { raw, documents } = await extract(key, parsed.text);
+    const result = { ...judge(documents), documents };
     return json({ result, raw, ocr: parsed });
   } catch (e) {
     return json({ error: String(e.message || e), ocr: parsed || null }, 502);
   }
 }
+
+export { judge };
