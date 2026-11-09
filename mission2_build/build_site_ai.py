@@ -46,10 +46,11 @@ follow = {}
 for n in cfg["instructConfiguration"]["nodes"][1:]:
     follow[n.get("name") or n.get("nodeName") or str(len(follow))] = n.get("prompt", "")[:200]
 
-(DOCS / "prompt.js").write_text(
+(ROOT / "worker" / "src" / "prompt.js").write_text(
     "// mission2_build/build_site_ai.py 로 생성. Studio 설정 #9와 같은 규칙.\n"
-    "window.JUDGE_SYSTEM = " + json.dumps(system, ensure_ascii=False) + ";\n",
+    "export const JUDGE_SYSTEM = " + json.dumps(system, ensure_ascii=False) + ";\n",
     encoding="utf-8")
+(DOCS / "prompt.js").unlink(missing_ok=True)
 
 # 3) 샘플 PDF와 정답
 sd = DOCS / "samples"

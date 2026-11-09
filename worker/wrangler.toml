@@ -1,0 +1,20 @@
+name = "yomi-risk-grader"
+main = "src/index.js"
+compatibility_date = "2025-06-01"
+
+[vars]
+# 이 사이트에서 온 요청만 받는다 (localhost는 코드에서 따로 허용)
+ALLOWED_ORIGINS = "https://kimhyoje.github.io"
+MODEL = "solar-pro2"
+
+# IP당 1분에 5번까지
+[[ratelimits]]
+name = "LIMITER"
+namespace_id = "1001"
+
+  [ratelimits.simple]
+  limit = 5
+  period = 60
+
+# Upstage 키는 아래 명령으로 비밀값에 넣는다 (파일에 적지 않는다)
+#   npx wrangler secret put UPSTAGE_API_KEY
