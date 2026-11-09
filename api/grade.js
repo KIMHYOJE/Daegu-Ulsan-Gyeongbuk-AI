@@ -60,6 +60,19 @@ async function parseDoc(key, file) {
   return { text, pages: j.usage?.pages ?? keys.length };
 }
 
+// 줄 단위 OCR(단어 순서). 칸마다 한 글자씩 적힌 번호를 표 구조 읽기보다 순서대로 잘 보여 준다.
+async function ocrLines(key, file) {
+  try {
+    const fd = new FormData();
+    fd.append("document", file, file.name || "document.pdf");
+    fd.append("model", "ocr");
+    const res = await fetch(`${API}/document-digitization`, { method: "POST", headers: { Authorization: `Bearer ${key}` }, body: fd });
+    if (!res.ok) return "";
+    const pages = (await res.json()).pages || [];
+    return pages.map((p, i) => `[${i + 1}쪽]\n${p.text || ""}`).join("\n\n");
+  } catch (e) { return ""; }
+}
+
 function pickJson(s) {
   s = String(s || "").replace(/```(?:json)?/g, "").trim();
   const a = s.indexOf("{"), b = s.lastIndexOf("}");
@@ -109,7 +122,8 @@ const titleOf = (d) => String(d.document_title || "").trim() || "제목 없는 �
 function judge(documents) {
   // OCR이 글자를 하나도 못 읽어 서식이 없으면 '노출 없음'이 아니라 내용 판독 실패로 본다
   if (!documents.length) documents = [{ document_title: "", readability: "unclear" }];
-  const docs = documents.map((d) => ({ ...d, title: titleOf(d) }));
+  // 기업재무정보는 계정 이름이 붙은 금액만 인정한다 (예: '매출액 41,965,000,000'). 이름 없는 숫자는 자본금·주식수 등일 수 있어 제외
+  const docs = documents.map((d) => ({ ...d, title: titleOf(d), corporate_financials: arr(d.corporate_financials).filter((x) => /[가-힣A-Za-z]/.test(x)) }));
   // 1단계 검토 필요
   const unreadable = docs.filter((d) => String(d.readability || "").trim().toLowerCase() === "unclear");
   const emptyRead = docs.filter((d) => {
@@ -219,8 +233,14 @@ export async function POST(request) {
 
   let parsed;
   try {
-    parsed = await parseDoc(key, file);
-    const { raw, documents } = parsed.text.trim() ? await extract(key, parsed.text) : { raw: "", documents: [] };
+    const [p, lines] = await Promise.all([parseDoc(key, file), ocrLines(key, file)]);
+    parsed = p;
+    // 표 구조 읽기에서 글자가 하나도 안 나오면 내용 판독 실패로 둔다(흐린 사진이 깨진 글자로 오판되는 것을 막음)
+    const input = parsed.text + (lines.trim() ? `
+
+===== 같은 서류의 줄 단위 OCR (칸마다 한 글자씩 적힌 번호는 이 순서로 이어 붙여 확인) =====
+${lines}` : "");
+    const { raw, documents } = parsed.text.trim() ? await extract(key, input) : { raw: "", documents: [] };
     const result = { ...judge(documents), documents };
     return json({ result, raw, ocr: parsed });
   } catch (e) {
