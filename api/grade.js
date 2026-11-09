@@ -8,7 +8,7 @@ import { EXTRACT_SYSTEM, EXTRACT_SCHEMA } from "./_prompt.js";
 const API = "https://api.upstage.ai/v1";
 export const MAX_BYTES = 4 * 1024 * 1024; // Vercel 요청 본문 한도(4.5MB) 안쪽
 const MODEL = process.env.MODEL || "solar-pro4";
-const LIMIT = 16, WINDOW_MS = 60_000; // IP당 1분에 16번 (인스턴스 단위, 샘플 14개 한꺼번에 판정 허용)
+const LIMIT = 24, WINDOW_MS = 60_000; // IP당 1분에 24번 (인스턴스 단위, 샘플 20개 한꺼번에 판정 허용)
 const hits = new Map();
 
 export const json = (body, status = 200) =>

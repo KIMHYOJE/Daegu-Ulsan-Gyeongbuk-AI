@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""최종 제출 설계서(docx → pdf). 실제 Studio 설정 #9와 같은 내용으로 작성."""
+"""최종 제출 설계서(docx → pdf). 실제 Studio 에이전트 "요미의 코딩" 설정 #1과 같은 내용으로 작성."""
 import copy, glob, sys
 from pathlib import Path
 import docx
@@ -11,7 +11,7 @@ TEAM = sys.argv[1] if len(sys.argv) > 1 else "팀명"
 ROOT = Path(__file__).resolve().parent
 OUT = ROOT.parent / "최종제출_제출물"
 TPL = next((ROOT.parent / "mission2_downloads" / "templates").glob("*"))
-NAME = f"{TEAM}_미션2_금융문서 민감정보 위험도 등급화"
+NAME = TEAM  # Studio 에이전트 이름 (라이브러리 게시·workflow.json과 같음)
 BLACK = RGBColor(0x11, 0x11, 0x11)
 
 d = docx.Document(next(TPL.glob("*설계서*.docx")))
@@ -55,12 +55,12 @@ P = d.paragraphs
 P[0].runs[0].text = "최종 설계서"
 for r in P[0].runs[1:]:
     r.text = ""
-P[1].runs[0].text = "- 금융문서 민감정보 위험도 등급화 워크플로우 (Studio 설정 #9) -"
+P[1].runs[0].text = "- 금융문서 민감정보 위험도 등급화 워크플로우 (Studio 설정 #1) -"
 for r in P[1].runs[1:]:
     r.text = ""
 
 for i, v in enumerate([TEAM, "IM뱅크 지정주제 — AI 기반 금융 문서 민감 정보 자동 식별 및 위험도 등급화",
-                       f"{NAME} (설정 #9)", "없음 (IM뱅크 지정주제)",
+                       f"{NAME} (설정 #1)", "없음 (IM뱅크 지정주제)",
                        "카드 미사용. 미션 2 이후 분류·추출 설명을 법정 서식 기준으로 고침"]):
     set_cell(t0.rows[i].cells[1], v)
 

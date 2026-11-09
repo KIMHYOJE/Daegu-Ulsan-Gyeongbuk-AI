@@ -1,15 +1,15 @@
 {
   "kind": "studio.workflow-config-draft",
   "schemaVersion": 4,
-  "exportedAt": "2026-11-09T06:25:38.213Z",
+  "exportedAt": "2026-11-09T15:01:58.750Z",
   "exportedFrom": {
-    "workflowId": "agt_GqGtXh2J2BK3MGkkAGPRQE",
-    "workflowName": "요미의 코딩_미션2_금융문서 민감정보 위험도 등급화",
-    "configId": "cfg_UT37ozKSBn9UPb3w4QjGWD",
-    "configVer": 9
+    "workflowId": "agt_QNRagA4yve25i7ciZiCSE2",
+    "workflowName": "요미의 코딩",
+    "configId": "cfg_ZqiCBxjuYHm4pFKbcingwA",
+    "configVer": 1
   },
   "workflowConfig": {
-    "workflow_name": "요미의 코딩_미션2_금융문서 민감정보 위험도 등급화",
+    "workflow_name": "요미의 코딩",
     "pipelineType": "instruct",
     "documentParseConfiguration": {
       "modelName": "document-parse",
@@ -28,6 +28,7 @@
       ]
     },
     "documentClassifyConfiguration": {
+      "modelName": "",
       "schema": {
         "type": "json_schema",
         "json_schema": {
@@ -51,15 +52,14 @@
           }
         }
       },
-      "modelName": "",
+      "customName": "분류-1",
       "split": true,
       "splitCriteria": [
         {
           "criterion": "CONTINUITY",
           "description": ""
         }
-      ],
-      "customName": "분류-1"
+      ]
     },
     "informationExtractConfiguration": {
       "modelName": "",
@@ -202,6 +202,8 @@
               }
             }
           },
+          "mode": "standard",
+          "modelName": "",
           "schemaLayout": {
             "version": 1,
             "columns": [
@@ -279,9 +281,6 @@
               }
             ]
           },
-          "mode": "standard",
-          "modelName": "",
-          "nodeMode": "extract",
           "manyRows": true,
           "manyRowsThreshold": 50,
           "manyRowsMaxRowsPerBatch": 400,
@@ -293,8 +292,7 @@
         "personal_doc": "금융서류_추출",
         "corporate_doc": "금융서류_추출",
         "public_doc": "금융서류_추출"
-      },
-      "confidenceThreshold": 0.9676
+      }
     },
     "instructConfiguration": {
       "nodes": [
