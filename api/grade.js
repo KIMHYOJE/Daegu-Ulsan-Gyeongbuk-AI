@@ -8,7 +8,7 @@ import { EXTRACT_SYSTEM, EXTRACT_SCHEMA } from "./_prompt.js";
 const API = "https://api.upstage.ai/v1";
 const MAX_BYTES = 4 * 1024 * 1024; // Vercel 요청 본문 한도(4.5MB) 안쪽
 const MODEL = process.env.MODEL || "solar-pro4";
-const LIMIT = 5, WINDOW_MS = 60_000; // IP당 1분에 5번 (인스턴스 단위)
+const LIMIT = 16, WINDOW_MS = 60_000; // IP당 1분에 16번 (인스턴스 단위, 샘플 14개 한꺼번에 판정 허용)
 const hits = new Map();
 
 const json = (body, status = 200) =>
@@ -107,6 +107,8 @@ const masked = (v) => arr(v).filter((x) => MASK.test(x));
 const titleOf = (d) => String(d.document_title || "").trim() || "제목 없는 서식";
 
 function judge(documents) {
+  // OCR이 글자를 하나도 못 읽어 서식이 없으면 '노출 없음'이 아니라 내용 판독 실패로 본다
+  if (!documents.length) documents = [{ document_title: "", readability: "unclear" }];
   const docs = documents.map((d) => ({ ...d, title: titleOf(d) }));
   // 1단계 검토 필요
   const unreadable = docs.filter((d) => String(d.readability || "").trim().toLowerCase() === "unclear");
@@ -173,7 +175,25 @@ function judge(documents) {
     const hidden = usable.flatMap((d) => ALL.flatMap(([k, item]) => masked(d[k]).slice(0, 1).map((v) => `${item} ${v}`))).slice(0, 2);
     reason = hidden.length ? `민감정보가 모두 가려져 있음(${hidden.join(", ")}). 사업장 주소·사업자등록번호 같은 공개 정보는 제외.` : "가려지지 않은 민감정보가 없음. 사업장 주소·사업자등록번호 같은 공개 정보는 제외.";
   }
-  return { risk_level: risk, detected_items: detected, data_subject: subject, reason };
+  // 화면에 보여 줄 근거: 서식별 노출 값·가린 값과 단계별 확인 결과
+  const tierOf = (item) => (HIGH.some(([, n]) => n === item) ? "고위험" : "중위험");
+  const evidence = {
+    checks: {
+      unreadable: unreadable.map((d) => d.title),
+      empty_read: emptyRead.map((d) => d.title),
+      reidentify: reid.map((d) => ({ doc: d.title, names: arr(d.person_names), clues: arr(d.quasi_identifiers) })),
+    },
+    documents: docs.map((d) => ({
+      title: d.title,
+      owner_type: d.owner_type || "",
+      readability: d.readability || "",
+      masking_stamp: Boolean(d.masking_stamp),
+      skipped: unreadable.includes(d) ? "판독 불가" : emptyRead.includes(d) ? "내용 판독 실패" : "",
+      items: ALL.map(([k, item]) => ({ item, tier: tierOf(item), exposed: shown(d[k]), masked: masked(d[k]) }))
+        .filter((x) => x.exposed.length || x.masked.length),
+    })),
+  };
+  return { risk_level: risk, detected_items: detected, data_subject: subject, reason, evidence };
 }
 
 export function GET() {
@@ -200,7 +220,7 @@ export async function POST(request) {
   let parsed;
   try {
     parsed = await parseDoc(key, file);
-    const { raw, documents } = await extract(key, parsed.text);
+    const { raw, documents } = parsed.text.trim() ? await extract(key, parsed.text) : { raw: "", documents: [] };
     const result = { ...judge(documents), documents };
     return json({ result, raw, ocr: parsed });
   } catch (e) {

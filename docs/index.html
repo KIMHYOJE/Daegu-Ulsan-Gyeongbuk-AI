@@ -113,6 +113,11 @@ details.opts{margin:8px 0;font-size:14px;color:var(--muted)}
 .cmp{margin-top:12px;padding:12px;border-radius:12px;background:var(--surface-2);font-size:14px}
 pre.raw{white-space:pre-wrap;word-break:break-all;max-height:260px;overflow:auto;background:var(--surface-2);padding:10px;border-radius:10px;font-size:12px}
 .err{color:var(--high)}
+.batch-sum{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 12px}
+.batch td,.batch th{font-size:14px;padding:8px 10px}
+.batch tr.open td{background:var(--surface-2)}
+.batch .st{color:var(--muted);font-size:13px}
+#aiOut .one{border-top:1px solid var(--line);margin-top:10px;padding-top:10px}
 footer{padding:40px 0;color:var(--muted);font-size:14px}
 </style>
 </head>
@@ -134,9 +139,9 @@ footer{padding:40px 0;color:var(--muted);font-size:14px}
       <label class="field">판정할 서류
         <select id="sample"><option value="">직접 올린 파일 사용</option></select>
       </label>
-      <input id="file" type="file" accept=".pdf,.png,.jpg,.jpeg,.tif,.tiff,.bmp,.webp">
-      <p class="note">4MB 이하 PDF·이미지. 실제 고객 서류는 올리지 마세요(가상 값 서류만). 1분에 5번까지 판정할 수 있습니다.</p>
-      <div class="btns"><button class="primary" id="aiRun">AI로 판정하기</button></div>
+      <input id="file" type="file" multiple accept=".pdf,.png,.jpg,.jpeg,.tif,.tiff,.bmp,.webp">
+      <p class="note">파일은 여러 개를 한꺼번에 고를 수 있습니다. 파일당 4MB 이하 PDF·이미지. 실제 고객 서류는 올리지 마세요(가상 값 서류만).</p>
+      <div class="btns"><button class="primary" id="aiRun">AI로 판정하기</button><button type="button" id="aiAll">샘플 14개 한꺼번에 판정</button></div>
       <ol class="steps" id="aiSteps">
         <li data-s="parse">문서 읽기 (Document Parse · OCR)</li>
         <li data-s="judge">칸별 항목 추출 (Solar) · 규칙 판정</li>
@@ -147,6 +152,7 @@ footer{padding:40px 0;color:var(--muted);font-size:14px}
     </div>
     <div class="result" id="aiOut" aria-live="polite"><span class="note">샘플을 고르거나 파일을 올린 뒤 AI로 판정하기를 누르세요. 샘플의 정답은 판정이 끝난 뒤 결과와 함께 보여 줍니다.</span></div>
   </div>
+  <div id="batchOut" aria-live="polite"></div>
 </div></section>
 
 <footer><div class="wrap">요미의 코딩 · 2026 대구·울산·경북 AI Agent 해커톤 · IM뱅크 지정주제 · 모든 샘플은 법정 서식에 가상 값을 채운 문서입니다.</div></footer>
