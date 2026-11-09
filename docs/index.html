@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>민감정보 위험도 등급화</title>
+<meta name="description" content="요미의 코딩 · IM뱅크 지정주제 — 금융 서류를 밖으로 보내기 전, 가려지지 않은 민감정보를 찾아 4단계로 판정하는 AI 워크플로우">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f5f7fc; --surface:#ffffff; --surface-2:#eef2fb; --text:#0d1430; --muted:#55607f; --line:#dbe2f1;
+  --brand:#0845d5; --brand-2:#2b7bff; --hero-1:#000041; --hero-2:#0845d5;
+  --high:#d92d43; --mid:#e08a00; --low:#14915a; --review:#6b4fd8;
+  --high-bg:#fdecee; --mid-bg:#fff4e0; --low-bg:#e5f6ee; --review-bg:#efebfd;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#070b1f; --surface:#0f1531; --surface-2:#151d42; --text:#eef1fb; --muted:#a3acc9; --line:#253061;
+    --brand:#5b8dff; --brand-2:#7fb0ff;
+    --high:#ff6b7d; --mid:#ffb547; --low:#4fd194; --review:#a993ff;
+    --high-bg:#3a1520; --mid-bg:#3a2a0d; --low-bg:#0f3324; --review-bg:#25204a;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#070b1f; --surface:#0f1531; --surface-2:#151d42; --text:#eef1fb; --muted:#a3acc9; --line:#253061;
+  --brand:#5b8dff; --brand-2:#7fb0ff;
+  --high:#ff6b7d; --mid:#ffb547; --low:#4fd194; --review:#a993ff;
+  --high-bg:#3a1520; --mid-bg:#3a2a0d; --low-bg:#0f3324; --review-bg:#25204a;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--text);font-family:"Noto Sans KR",system-ui,sans-serif;line-height:1.65;word-break:keep-all}
+a{color:var(--brand)}
+.wrap{max-width:1080px;margin:0 auto;padding:0 16px}
+nav{position:sticky;top:0;z-index:5;background:color-mix(in srgb,var(--bg) 85%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+nav .wrap{display:flex;gap:18px;align-items:center;height:56px;overflow-x:auto;white-space:nowrap}
+nav b{margin-right:auto;font-weight:900;letter-spacing:.02em}
+nav a{color:var(--muted);text-decoration:none;font-size:14px}
+nav a:hover{color:var(--text)}
+header.hero{background:radial-gradient(120% 140% at 80% 100%,var(--hero-2) 0%,var(--hero-1) 70%);color:#fff;padding:88px 0 72px}
+.pill{display:inline-block;border:1px solid rgba(255,255,255,.45);border-radius:999px;padding:6px 16px;font-size:14px}
+.hero h1{font-size:clamp(32px,6vw,60px);line-height:1.15;margin:20px 0 14px;font-weight:900}
+.hero p{max-width:640px;font-size:18px;opacity:.88;margin:0}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:40px}
+.stat{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:14px;padding:16px}
+.stat b{display:block;font-size:30px;font-weight:900}
+.stat span{font-size:14px;opacity:.85}
+section{padding:72px 0;border-bottom:1px solid var(--line)}
+h2{font-size:clamp(24px,4vw,34px);margin:0 0 8px;font-weight:900}
+.lead{color:var(--muted);margin:0 0 28px}
+.grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px}
+.card h3{margin:0 0 6px;font-size:18px}
+.card p{margin:0;color:var(--muted);font-size:15px}
+.num{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:var(--brand);color:#fff;font-weight:700;font-size:14px;margin-bottom:10px}
+.badge{display:inline-block;border-radius:999px;padding:2px 10px;font-size:13px;font-weight:700;white-space:nowrap}
+.b-고위험{background:var(--high-bg);color:var(--high)}
+.b-중위험{background:var(--mid-bg);color:var(--mid)}
+.b-저위험{background:var(--low-bg);color:var(--low)}
+.b-검토{background:var(--review-bg);color:var(--review)}
+table{width:100%;border-collapse:collapse;background:var(--surface);border-radius:16px;overflow:hidden;border:1px solid var(--line)}
+th,td{text-align:left;padding:12px 14px;border-bottom:1px solid var(--line);font-size:15px;vertical-align:top}
+th{background:var(--surface-2);font-size:14px;color:var(--muted)}
+tr:last-child td{border-bottom:0}
+.scroll{overflow-x:auto;border-radius:16px}
+.flow{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));counter-reset:s}
+.step{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;position:relative}
+.step small{color:var(--brand);font-weight:700}
+.step h4{margin:4px 0;font-size:16px}
+.step p{margin:0;font-size:14px;color:var(--muted)}
+.principle{background:var(--surface-2);border-radius:16px;padding:22px;margin-bottom:18px;font-size:18px}
+.principle code{background:var(--surface);padding:2px 8px;border-radius:6px;border:1px solid var(--line)}
+/* simulator */
+.sim{display:grid;gap:16px;grid-template-columns:1fr}
+@media(min-width:860px){.sim{grid-template-columns:1.1fr .9fr}}
+textarea{width:100%;min-height:230px;border-radius:14px;border:1px solid var(--line);background:var(--surface);color:var(--text);padding:14px;font:15px/1.6 ui-monospace,Consolas,monospace;resize:vertical}
+.btns{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+button{border:1px solid var(--line);background:var(--surface);color:var(--text);border-radius:999px;padding:8px 14px;font:inherit;font-size:14px;cursor:pointer}
+button.primary{background:var(--brand);border-color:var(--brand);color:#fff}
+label.chk{display:flex;gap:8px;align-items:center;font-size:14px;color:var(--muted)}
+.result{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px}
+.result .lvl{font-size:30px;font-weight:900;margin:6px 0}
+.result ul{padding-left:18px;margin:8px 0}
+.note{font-size:13px;color:var(--muted)}
+/* chart */
+.bars{display:flex;align-items:flex-end;gap:12px;height:220px;padding:16px;background:var(--surface);border:1px solid var(--line);border-radius:16px}
+.bar{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:6px;font-size:14px}
+.bar i{display:block;width:100%;max-width:64px;background:var(--brand);border-radius:8px 8px 0 0}
+.bar.full i{background:var(--low)}
+.bar span{color:var(--muted)}
+.filter{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.filter button[aria-pressed="true"]{background:var(--text);color:var(--bg);border-color:var(--text)}
+footer{padding:40px 0;color:var(--muted);font-size:14px}
+</style>
+</head>
+<body>
+<nav><div class="wrap"><b>YOMI CODING</b><a href="#problem">문제</a><a href="#rules">판정 기준</a><a href="#flow">워크플로우</a><a href="#demo">체험</a><a href="#results">결과</a><a href="#limits">한계</a></div></nav>
+
+<header class="hero"><div class="wrap">
+  <span class="pill">IM뱅크 지정주제 · 요미의 코딩</span>
+  <h1>금융문서 민감정보<br>위험도 자동 등급화</h1>
+  <p>은행 서류를 밖으로 보내기 전에 가려지지 않은 민감정보를 찾아 고위험·중위험·저위험·검토 필요 4단계로 1차 판정하고, 등급마다 담당자가 할 일을 바로 적어 줍니다.</p>
+  <div class="stats">
+    <div class="stat"><b>14 / 14</b><span>묶음 정답 일치 (설정 #8·#9)</span></div>
+    <div class="stat"><b>21건</b><span>법정 서식 8종에 가상 값 입력</span></div>
+    <div class="stat"><b>18개</b><span>칸별 추출 항목</span></div>
+    <div class="stat"><b>4단계</b><span>위험도 + 후속 조치</span></div>
+  </div>
+</div></header>
+
+<section id="problem"><div class="wrap">
+  <h2>업무 현장의 문제</h2>
+  <p class="lead">개인정보보호 담당자는 서류 묶음을 눈으로 한 칸씩 확인해야 합니다.</p>
+  <div class="grid">
+    <div class="card"><h3>서식이 섞여 옴</h3><p>원천징수영수증, 동의서, 외국인등록사실증명, 재무제표가 한 PDF로 이어져 옵니다.</p></div>
+    <div class="card"><h3>일부만 가린 서류</h3><p>신청자 칸은 가렸는데 배우자 칸 번호가 그대로 남아 나가는 일이 생깁니다.</p></div>
+    <div class="card"><h3>흐린 촬영본</h3><p>휴대폰으로 찍은 서류는 번호를 읽을 수 없어 노출 여부 자체를 판단하기 어렵습니다.</p></div>
+  </div>
+</div></section>
+
+<section id="rules"><div class="wrap">
+  <h2>판정 기준</h2>
+  <div class="principle"><b>Unmasked = Exposed.</b> 마스킹 문자(<code>*</code> <code>X</code> <code>●</code> <code>○</code>)가 하나도 없는 전체 값만 ‘노출’로 셉니다. <code>900101-1******</code>는 노출이 아닙니다.</div>
+  <div class="scroll"><table>
+    <thead><tr><th>확인 순서</th><th>등급</th><th>조건</th><th>후속 조치</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td><span class="badge b-검토">검토 필요</span></td><td>판독 불가 문서가 있음, 또는 가린 이름 + 회사명·직위·출생연도로 재식별 위험</td><td>담당자 확인 요청</td></tr>
+      <tr><td>2</td><td><span class="badge b-고위험">고위험</span></td><td>주민등록·외국인등록·여권·운전면허·카드번호 중 1개 이상 노출</td><td>발송 차단·보고</td></tr>
+      <tr><td>3</td><td><span class="badge b-중위험">중위험</span></td><td>계좌·휴대전화·주소·이메일·소득·신용·기업재무정보 중 1개 이상 노출</td><td>마스킹 요청</td></tr>
+      <tr><td>4</td><td><span class="badge b-저위험">저위험</span></td><td>노출된 민감정보 0개</td><td>발송 승인 기록</td></tr>
+    </tbody>
+  </table></div>
+  <p class="note">사업자등록번호, 법인등록번호, 회사·사업장 주소, 고객센터 번호, 자본금·주식 수는 공개 정보로 보고 제외합니다.</p>
+</div></section>
+
+<section id="flow"><div class="wrap">
+  <h2>워크플로우</h2>
+  <p class="lead">Upstage AI Studio에서 노드 7개로 구성했습니다.</p>
+  <div class="flow">
+    <div class="step"><small>1 · Parse</small><h4>OCR 강제</h4><p>이미지 PDF도 글자로 읽어 빈 문서로 오판하지 않게 합니다.</p></div>
+    <div class="step"><small>2 · Classify</small><h4>서식 분리</h4><p>개인·법인·공개 문서로 나눠 서식이 섞이지 않게 합니다.</p></div>
+    <div class="step"><small>3 · Extract</small><h4>18개 항목</h4><p>번호·이름·주소를 칸별로, 마스킹 문자는 그대로 뽑습니다.</p></div>
+    <div class="step"><small>4 · Merge</small><h4>묶음 합치기</h4><p>발송 1건 단위로 결과를 모읍니다.</p></div>
+    <div class="step"><small>5 · Validate</small><h4>판독 검증</h4><p>readability가 clear가 아니면 오류로 표시합니다.</p></div>
+    <div class="step"><small>6 · Instruct</small><h4>위험도 판정</h4><p>검토 필요→고→중→저 순서로 한 등급만 냅니다.</p></div>
+    <div class="step"><small>7 · Instruct ×4</small><h4>후속 조치</h4><p>차단 보고 / 마스킹 요청 / 승인 기록 / 확인 요청문.</p></div>
+  </div>
+</div></section>
+
+<section id="demo"><div class="wrap">
+  <h2>판정 규칙 체험</h2>
+  <p class="lead">서류에서 뽑은 값을 붙여 넣으면 같은 판정 규칙을 브라우저에서 적용해 봅니다. 입력은 이 페이지 밖으로 전송되지 않습니다.</p>
+  <div class="sim">
+    <div>
+      <textarea id="input" spellcheck="false" aria-label="판정할 텍스트"></textarea>
+      <div class="btns">
+        <button data-ex="0">예시: 배우자 칸 노출</button>
+        <button data-ex="1">예시: 마스킹 처리본</button>
+        <button data-ex="2">예시: 법인 재무제표</button>
+        <button data-ex="3">예시: 공개 정보만</button>
+      </div>
+      <label class="chk"><input type="checkbox" id="unclear"> 흐려서 읽을 수 없는 칸이 있음 (판독 불가)</label>
+      <div class="btns"><button class="primary" id="run">판정하기</button></div>
+    </div>
+    <div class="result" id="out" aria-live="polite"><span class="note">왼쪽에 값을 넣고 판정하기를 누르세요.</span></div>
+  </div>
+  <p class="note">실제 판정은 AI Studio 워크플로우가 서식을 읽고 내립니다. 이 체험은 판정 기준을 보여 주기 위한 정규식 미리보기이며 모든 경우를 잡지 못합니다. 예시 번호는 모두 가상 값입니다.</p>
+</div></section>
+
+<section id="results"><div class="wrap">
+  <h2>결과</h2>
+  <p class="lead">위험도·노출 항목·정보 주체 세 키가 정답과 모두 같으면 일치로 셉니다.</p>
+  <div class="bars" role="img" aria-label="설정 버전별 정답 일치 묶음 수: #4 11, #5 13, #6 13, #7 13, #8 14, #9 14">
+    <div class="bar"><b>11</b><i style="height:78%"></i><span>#4</span></div>
+    <div class="bar"><b>13</b><i style="height:92%"></i><span>#5</span></div>
+    <div class="bar"><b>13</b><i style="height:92%"></i><span>#6</span></div>
+    <div class="bar"><b>13</b><i style="height:92%"></i><span>#7</span></div>
+    <div class="bar full"><b>14</b><i style="height:100%"></i><span>#8</span></div>
+    <div class="bar full"><b>14</b><i style="height:100%"></i><span>#9</span></div>
+  </div>
+  <div class="grid" style="margin:18px 0 36px">
+    <div class="card"><h3>#5 판독 실패 규칙</h3><p>제목·항목이 모두 비면 ‘노출 없음’ 대신 검토 필요로 판정.</p></div>
+    <div class="card"><h3>#6 모든 쪽 읽기</h3><p>두 서식이 한 범위로 묶여도 모든 쪽을 읽어 번호 누락 방지.</p></div>
+    <div class="card"><h3>#7·#8 자기 점검</h3><p>목록의 값을 하나씩 보고, 실제 값을 인용 못 하면 항목에서 제외.</p></div>
+  </div>
+  <h3>정답 데이터셋 14개 묶음</h3>
+  <div class="filter" id="filter"></div>
+  <div class="scroll"><table>
+    <thead><tr><th>묶음</th><th>서류</th><th>등급</th><th>노출 항목</th><th>근거</th></tr></thead>
+    <tbody id="rows"></tbody>
+  </table></div>
+</div></section>
+
+<section id="limits"><div class="wrap">
+  <h2>한계</h2>
+  <div class="grid">
+    <div class="card"><h3>가상 데이터</h3><p>실제 고객 서류가 아니라 법정 서식에 가상 값을 채운 21건으로 검증했습니다.</p></div>
+    <div class="card"><h3>1차 판정</h3><p>AI 판정은 담당자 확인을 돕는 도구이며, 검토 필요 등급은 사람이 직접 봅니다.</p></div>
+    <div class="card"><h3>분할 설명 미반영</h3><p>Studio 가져오기 과정에서 서식 분할 기준 설명이 빠져, 추출 단계에서 모든 쪽을 읽도록 보완했습니다.</p></div>
+  </div>
+</div></section>
+
+<footer><div class="wrap">요미의 코딩 · 2026 대구·울산·경북 AI Agent 해커톤 · IM뱅크 지정주제</div></footer>
+
+<script>window.CASES=[{"id": "A", "set": "set01", "docs": ["근로소득 원천징수영수증", "금융정보 등 제공 동의서"], "risk_level": "고위험", "detected_items": ["주민등록번호", "주소", "소득정보", "휴대전화번호"], "data_subject": "개인", "reason": "원천징수영수증과 동의서에 주민등록번호(900101-1000017)가 가려지지 않아 고위험. 거주지 주소, 급여 총액 54,000,000원, 휴대전화번호(010-0000-2847)도 노출(회사 주소·사업자등록번호는 제외)"}, {"id": "B", "set": "set02", "docs": ["근로소득 원천징수영수증(마스킹 처리본)"], "risk_level": "중위험", "detected_items": ["소득정보"], "data_subject": "개인", "reason": "주민등록번호(920202-2******)와 주소는 가려졌지만 급여 39,600,000원·상여 3,300,000원 등 소득정보가 그대로 남아 중위험"}, {"id": "C", "set": "set03", "docs": ["표준재무상태표", "표준손익계산서", "주식등변동상황명세서"], "risk_level": "고위험", "detected_items": ["주민등록번호", "기업재무정보"], "data_subject": "개인·기업", "reason": "주식등변동상황명세서에 개인 주주 2명의 주민등록번호(710205-1000025, 750811-2000036)가 가려지지 않아 고위험. 재무상태표·손익계산서의 자산·매출액 등 기업재무정보도 포함(사업자등록번호·법인등록번호는 제외)"}, {"id": "D", "set": "set04", "docs": ["표준재무상태표", "사업자등록증(법인)"], "risk_level": "중위험", "detected_items": ["기업재무정보"], "data_subject": "기업", "reason": "재무상태표의 유동자산 8,215,000,000원 등 기업재무정보가 있어 중위험. 사업자등록증의 사업자등록번호·사업장 주소는 공개 정보로 제외"}, {"id": "E", "set": "set05", "docs": ["사업자등록증(개인사업자)"], "risk_level": "저위험", "detected_items": [], "data_subject": "없음", "reason": "사업자등록증의 상호·사업자등록번호·사업장 소재지는 공개 정보이고, 주민등록번호·휴대전화번호 같은 개인 식별 항목이 없어 저위험"}, {"id": "F", "set": "set06", "docs": ["외국인등록사실증명"], "risk_level": "고위험", "detected_items": ["외국인등록번호", "여권번호", "주소"], "data_subject": "개인", "reason": "외국인등록번호(930517-5000041)와 여권번호(C0000123)가 가려지지 않아 고위험. 체류지 주소와 동반 가족의 외국인등록번호(950810-6000052)도 노출"}, {"id": "G", "set": "set07", "docs": ["외국인등록사실증명(휴대폰 촬영본)"], "risk_level": "검토 필요", "detected_items": [], "data_subject": "없음", "reason": "기울어지고 흐린 촬영본에 빛 번짐까지 있어 등록번호·여권번호 칸을 읽을 수 없어 노출 여부를 확인할 수 없음"}, {"id": "H", "set": "set08", "docs": ["여권 발급 신청서(스캔본)"], "risk_level": "고위험", "detected_items": ["주민등록번호", "휴대전화번호"], "data_subject": "개인", "reason": "약간 기울고 흐린 스캔이지만 글자는 읽히며, 주민등록번호(880512-2000048)가 가려지지 않아 고위험. 본인·긴급연락처 휴대전화번호(010-0000-4821, 010-0000-7710)도 노출"}, {"id": "I", "set": "set09", "docs": ["금융정보 등 제공 동의서"], "risk_level": "고위험", "detected_items": ["주민등록번호", "휴대전화번호"], "data_subject": "개인", "reason": "신청자 본인 주민등록번호(850315-1******)와 주소는 가렸지만, 같은 서식의 배우자 칸에 주민등록번호(870722-2000063)와 휴대전화번호(010-0000-5518)가 그대로 남아 고위험"}, {"id": "J", "set": "set10", "docs": ["여권 발급 신청서", "외국인등록사실증명"], "risk_level": "고위험", "detected_items": ["주민등록번호", "휴대전화번호", "외국인등록번호", "여권번호", "주소"], "data_subject": "개인", "reason": "여권 발급 신청서의 주민등록번호(890630-1000082)와 외국인등록사실증명의 외국인등록번호(910224-6000074)·여권번호(P0000456)가 가려지지 않아 고위험. 휴대전화번호와 체류지 주소도 노출"}, {"id": "K", "set": "set11", "docs": ["주식등변동상황명세서(마스킹 처리본)"], "risk_level": "저위험", "detected_items": [], "data_subject": "없음", "reason": "주주의 주민등록번호가 뒷자리까지 가려져(710205-1******) 노출된 항목이 없음. 법인 주주의 사업자등록번호와 회사 자본금·주식 수는 공개 정보로 제외"}, {"id": "L", "set": "set12", "docs": ["금융정보 등 제공 동의서(휴대폰 촬영본)"], "risk_level": "검토 필요", "detected_items": [], "data_subject": "없음", "reason": "심하게 흐리고 빛이 번진 촬영본이라 주민등록번호·휴대전화번호 칸의 글자를 읽을 수 없어 노출 여부를 확인할 수 없음"}, {"id": "M", "set": "set13", "docs": ["표준손익계산서", "주식등변동상황명세서(마스킹 처리본)", "사업자등록증(법인)"], "risk_level": "중위험", "detected_items": ["기업재무정보"], "data_subject": "기업", "reason": "손익계산서의 매출액 18,402,000,000원 등 기업재무정보가 있어 중위험. 주주 주민등록번호는 뒷자리가 가려졌고 사업자등록번호·사업장 주소는 제외"}, {"id": "N", "set": "set14", "docs": ["근로소득 원천징수영수증"], "risk_level": "고위험", "detected_items": ["주민등록번호", "주소", "소득정보"], "data_subject": "개인", "reason": "주민등록번호(950721-2000105)가 가려지지 않아 고위험. 거주지 주소와 급여 총액 33,600,000원 등 소득정보도 노출(회사 주소는 제외)"}];</script>
+<script>
+const EX=[
+"[금융정보 등 제공 동의서]\n신청인 성명: 김가상\n신청인 주민등록번호: 850315-1******\n신청인 주소: 대구광역시 ○○구 ****로 **\n배우자 주민등록번호: 870722-2000063\n배우자 휴대전화: 010-0000-5518",
+"[근로소득 원천징수영수증 · 개인정보 마스킹 처리본]\n주민등록번호: 920202-2******\n주소: 경상북도 ○○시 ***길 **\n급여 39,600,000\n상여 3,300,000",
+"[표준재무상태표]\n사업자등록번호: 123-45-67890\n법인등록번호: 110111-0000000\n유동자산 8,215,000,000\n매출액 41,965,000,000",
+"[사업자등록증]\n상호: 가상상사\n사업자등록번호: 123-45-67890\n사업장 소재지: 대구광역시 북구 가상로 1\n고객센터: 1588-0000"];
+const M=/[*X●○]/;
+const RULES=[
+ {name:"주민등록번호",lvl:"high",re:/\b\d{6}\s?-\s?[1-4][0-9*X●○]{6}\b/g,ctx:/법인등록/},
+ {name:"외국인등록번호",lvl:"high",re:/\b\d{6}\s?-\s?[5-8][0-9*X●○]{6}\b/g},
+ {name:"여권번호",lvl:"high",re:/\b[MSRGDCP][0-9*X●○]{7,8}\b/g},
+ {name:"운전면허번호",lvl:"high",re:/\b\d{2}-\d{2}-\d{6}-\d{2}\b/g},
+ {name:"카드번호",lvl:"high",re:/\b\d{4}-[0-9*X●○]{4}-[0-9*X●○]{4}-[0-9*X●○]{4}\b/g},
+ {name:"휴대전화번호",lvl:"mid",re:/\b01[016789]-[0-9*X●○]{3,4}-[0-9*X●○]{4}\b/g},
+ {name:"이메일",lvl:"mid",re:/[\w.*]+@[\w.-]+\.[a-z]{2,}/gi},
+ {name:"계좌번호",lvl:"mid",re:/계좌[^\n]*?(\d[\d*X●○-]{9,})/g,grp:1},
+ {name:"주소",lvl:"mid",re:/(?:^|\n)\s*(?:신청인 |배우자 |본인 )?(?:주소|거주지|체류지)\s*[:：]\s*([^\n]+)/g,grp:1},
+ {name:"소득정보",lvl:"mid",re:/(?:급여|상여|총급여|연소득|결정세액)\s*[:：]?\s*([\d*X●○,]{5,})/g,grp:1},
+ {name:"기업재무정보",lvl:"mid",re:/(?:유동자산|자산총계|부채총계|자본총계|매출액|영업이익|당기순이익|매출원가)\s*[:：]?\s*([\d*X●○,]{5,})/g,grp:1}
+];
+const LV={"고위험":"b-고위험","중위험":"b-중위험","저위험":"b-저위험","검토 필요":"b-검토"};
+const ACT={"고위험":"발송 차단·보고","중위험":"마스킹 요청","저위험":"발송 승인 기록","검토 필요":"담당자 확인 요청"};
+function esc(s){return s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
+function judge(text,unclear){
+  const exposed={},masked=[];
+  for(const r of RULES){
+    for(const m of text.matchAll(r.re)){
+      const v=(r.grp?m[r.grp]:m[0]).trim();
+      const line=text.slice(text.lastIndexOf("\n",m.index)+1,text.indexOf("\n",m.index)>-1?text.indexOf("\n",m.index):undefined);
+      if(r.ctx&&r.ctx.test(line))continue;
+      if(M.test(v)){masked.push(r.name+": "+v);continue;}
+      (exposed[r.name]??=[]).push(v);
+    }
+  }
+  const items=Object.keys(exposed);
+  let level;
+  if(unclear) level="검토 필요";
+  else if(items.some(n=>RULES.find(r=>r.name===n).lvl==="high")) level="고위험";
+  else if(items.length) level="중위험";
+  else level="저위험";
+  return {level,exposed,masked};
+}
+function render(){
+  const {level,exposed,masked}=judge(document.getElementById("input").value,document.getElementById("unclear").checked);
+  const items=Object.entries(exposed);
+  let h=`<span class="note">risk_level</span><div class="lvl"><span class="badge ${LV[level]}" style="font-size:24px;padding:4px 16px">${level}</span></div>`;
+  h+=`<p><b>후속 조치:</b> ${ACT[level]}</p>`;
+  if(level==="검토 필요") h+=`<p class="note">판독 불가 문서가 있어 노출 여부를 확정하지 않고 담당자에게 넘깁니다.</p>`;
+  h+=`<p><b>detected_items</b></p>`+(items.length?`<ul>${items.map(([k,v])=>`<li>${esc(k)} — <code>${esc(v.join(", "))}</code></li>`).join("")}</ul>`:`<p class="note">노출된 항목 없음</p>`);
+  if(masked.length) h+=`<p><b>가려져 노출에서 뺀 값</b></p><ul>${masked.map(m=>`<li><code>${esc(m)}</code></li>`).join("")}</ul>`;
+  document.getElementById("out").innerHTML=h;
+}
+document.querySelectorAll("[data-ex]").forEach(b=>b.onclick=()=>{document.getElementById("input").value=EX[+b.dataset.ex];document.getElementById("unclear").checked=false;render();});
+document.getElementById("run").onclick=render;
+document.getElementById("input").value=EX[0];
+
+// dataset table
+const rows=document.getElementById("rows"),filter=document.getElementById("filter");
+let cur="전체";
+function draw(){
+  rows.innerHTML=(window.CASES||[]).filter(c=>cur==="전체"||c.risk_level===cur).map(c=>
+    `<tr><td><b>${c.id}</b><br><span class="note">${c.set}</span></td><td>${esc(c.docs.join(", "))}</td><td><span class="badge ${LV[c.risk_level]}">${c.risk_level}</span></td><td>${c.detected_items.length?esc(c.detected_items.join(", ")):"—"}</td><td style="min-width:280px">${esc(c.reason)}</td></tr>`).join("");
+}
+["전체","고위험","중위험","저위험","검토 필요"].forEach(k=>{
+  const n=k==="전체"?(window.CASES||[]).length:(window.CASES||[]).filter(c=>c.risk_level===k).length;
+  const b=document.createElement("button");b.textContent=`${k} ${n}`;b.setAttribute("aria-pressed",k===cur);
+  b.onclick=()=>{cur=k;filter.querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x===b));draw();};
+  filter.appendChild(b);
+});
+draw();
+</script>
+</body>
+</html>
