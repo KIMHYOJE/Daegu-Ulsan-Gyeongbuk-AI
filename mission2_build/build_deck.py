@@ -92,19 +92,20 @@ S.append("""<section><h2>4. 신뢰성 설계 — 틀리기 쉬운 상황을 미�
 S.append(f"""<section><h2>5. 데이터셋 — 실제 법정 서식에 가상 값</h2>
 <div class="cols"><div><ul>
 <li>국가법령정보센터 별지 서식 8종: 근로소득 원천징수영수증, 금융정보 등 제공 동의서, 여권 발급 신청서, 외국인등록사실증명, 표준재무상태표, 표준손익계산서, 주식등변동상황명세서, 사업자등록증</li>
-<li><b>14개 묶음 · 문서 21건</b>, 유형 ①~⑤ 모두 포함</li>
+<li><b>{len(cases)}개 묶음 · 문서 {sum(len(c['documents']) for c in cases)}건</b>, 유형 ①~⑤ 모두 포함</li>
 <li>정답 분포: 고위험 {dist.get('고위험',0)} · 중위험 {dist.get('중위험',0)} · 저위험 {dist.get('저위험',0)} · 검토 필요 {dist.get('검토 필요',0)}</li>
 <li>번호는 가상임이 보이게 0을 채움: 900101-1000017, 010-0000-2847</li></ul></div>
 <div class="imgs"><img src="{img('set09', 0, (0.05, 0.08, 0.95, 0.47))}"><span>I — 금융정보 등 제공 동의서 (배우자 칸만 노출)</span></div></div></section>""")
 
-S.append(f"""<section><h2>6. 개선 과정과 결과 — 14건 대조</h2>
+S.append(f"""<section><h2>6. 개선 과정과 결과 — {len(cases)}건 대조</h2>
 <div class="cols"><div class="wide"><table class="t sm"><tr><th>케이스</th><th>서류</th><th>정답</th><th>결과</th><th></th></tr>{''.join(rows)}</table></div>
 <div><table class="t"><tr><th>설정</th><th>일치</th><th>고친 점</th></tr>
 <tr><td>#4</td><td>11/14</td><td>법정 서식 기준으로 분류·추출 설명 교체</td></tr>
 <tr><td>#5</td><td>13/14</td><td>흐린 사진 '판독 실패' 규칙, ○ 가림 문자 추가</td></tr>
 <tr><td>#6</td><td>13/14</td><td>서식 2종이 한 범위로 묶여도 모든 쪽을 읽도록 추출 지시 수정</td></tr>
 <tr><td>#7</td><td>13/14</td><td>출력 전 자기 점검(가린 값만으로 항목을 넣지 않음)</td></tr>
-<tr><td>{e(RES['config'])}</td><td><b>{ok}/14</b></td><td>목록 값을 첫 값만 보지 않고 하나씩 모두 확인</td></tr></table>
+<tr><td>#8·#9</td><td>14/14</td><td>목록 값을 첫 값만 보지 않고 하나씩 모두 확인</td></tr>
+<tr><td>{e(RES['config'])} 최종</td><td><b>{ok}/{len(cases)}</b></td><td>#9와 같은 설정으로 묶음 20개 전체 실행 (set15~20 추가)</td></tr></table>
 <p class="note">위험도 · 노출 항목 · 정보 주인 3개가 모두 같아야 '일치'로 셈</p></div></div></section>""")
 
 g = RES.get("followups", {})
@@ -115,6 +116,7 @@ S.append(f"""<section><h2>7. 데모 — 흐린 촬영본은 추측하지 않고 
 
 S.append("""<section><h2>8. 한계와 다음 단계</h2><ul class="big">
 <li>같은 설정이어도 실행마다 판단이 조금씩 흔들림 → 출력 전 자기 점검 규칙과 '검토 필요' 경로로 피해를 줄임</li>
+<li>불일치 1건(O, set15): 번호를 모두 가린 묶음인데 근거에는 '노출 항목 없음'이라 쓰고 등급은 중위험으로 냄 → 근거와 등급이 어긋나면 검토 필요로 넘기는 점검을 다음 설정에 추가</li>
 <li>재식별 위험(이름 가림 + 조합 정보)은 규칙으로 정한 조합만 잡음 → 실제 민원·보고서 서식으로 사례를 늘릴 예정</li>
 <li>최종 발송 판단은 담당자가 함: 이 워크플로우는 1차 점검과 조치 문서 초안까지 맡음</li></ul></section>""")
 
@@ -139,4 +141,4 @@ hp = DECK / "deck.html"
 hp.write_text(page, encoding="utf-8")
 pdf = OUT / f"{TEAM}_최종제출_발표자료.pdf"
 subprocess.run([EDGE, "--headless=new", "--disable-gpu", "--no-pdf-header-footer", f"--print-to-pdf={pdf}", hp.as_uri()], check=True, timeout=120)
-print(pdf, fitz.open(pdf).page_count, "pages", f"{ok}/14")
+print(pdf, fitz.open(pdf).page_count, "pages", f"{ok}/{len(cases)}")
