@@ -5,7 +5,7 @@ import { JUDGE_SYSTEM } from "./_prompt.js";
 
 const API = "https://api.upstage.ai/v1";
 const MAX_BYTES = 4 * 1024 * 1024; // Vercel 요청 본문 한도(4.5MB) 안쪽
-const MODEL = process.env.MODEL || "solar-pro2";
+const MODEL = process.env.MODEL || "solar-pro4";
 const LIMIT = 5, WINDOW_MS = 60_000; // IP당 1분에 5번 (인스턴스 단위)
 const hits = new Map();
 
