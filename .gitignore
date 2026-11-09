@@ -8,3 +8,4 @@ mission2_build/work/
 __pycache__/
 *.pyc
 ~$*
+.claude/
