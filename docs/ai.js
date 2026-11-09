@@ -73,7 +73,7 @@
   }
 
   // 결과 한 건을 화면용 HTML로
-  function detailHtml(out, ocr, raw, kase) {
+  function detailHtml(out, ocr, raw, kase, job) {
     const lvl = out.risk_level || "?";
     const items = Array.isArray(out.detected_items) ? out.detected_items : [];
     let h = `<span class="note">판정 결과</span><div class="lvl"><span class="badge ${BADGE[lvl] || ""}" style="font-size:24px;padding:4px 16px">${esc(lvl)}</span></div>`;
@@ -84,6 +84,7 @@
       const m = matches(kase, out), x = (b) => (b ? "✅" : "❌");
       h += `<div class="cmp"><b>정답과 비교 (${esc(kase.set)})</b><br>${x(m.lvl)} 위험도: 정답 ${esc(kase.risk_level)}<br>${x(m.items)} 노출 항목: 정답 ${esc(kase.detected_items.join(", ") || "없음")}<br>${x(m.subj)} 정보 주체: 정답 ${esc(kase.data_subject)}<br><span class="note">${m.lvl && m.items && m.subj ? "세 항목 모두 정답과 같습니다." : "일부가 정답과 다릅니다. OCR이 일부 칸을 다르게 읽었을 수 있으니 아래 ‘서식별 추출 결과’에서 어느 값이 달랐는지 확인해 보세요."}</span></div>`;
     }
+    h += maskHtml(out, job);
     h += evidenceHtml(out);
     const docs = Array.isArray(out.documents) ? out.documents : [];
     h += `<details><summary>서식별 추출 원본(JSON) 보기 (${docs.length}개)</summary><pre class="raw">${esc(JSON.stringify(docs, null, 2))}</pre></details>`;
@@ -123,6 +124,89 @@
     return h;
   }
 
+  // ---- 가린 PDF 만들기 ----
+  // 노출된 값의 위치를 /api/mask(Upstage OCR 단어 좌표)로 찾고, 브라우저에서 쪽을 그림으로 그려 그 자리를 검게 칠한 PDF를 만든다.
+  // 쪽을 그림으로 바꾸므로 가린 글자가 PDF 안에 텍스트로 남지 않는다. 파일은 판정 서버 외에는 어디로도 보내지 않는다.
+  const jobs = [];
+  const exposedValues = (out) => [...new Set(((out.evidence || {}).documents || []).flatMap((d) => d.items.flatMap((x) => x.exposed)).map(String))];
+  function maskHtml(out, job) {
+    if (job == null) return "";
+    const vals = exposedValues(out);
+    if (!vals.length) return `<p class="note">가려야 할 노출 값이 없어 가린 PDF는 만들 필요가 없습니다.</p>`;
+    return `<div class="cmp"><b>가린 PDF 만들기</b> <span class="note">노출된 값 ${vals.length}개를 검게 가린 PDF를 내려받습니다. (쪽을 그림으로 바꿔 가린 글자가 남지 않음)</span><div class="btns"><button type="button" data-mask="${job}">가린 PDF 만들기</button></div><div class="mask-st" data-mask-st="${job}"></div></div>`;
+  }
+  const loaded = {};
+  const loadScript = (src) => (loaded[src] ??= new Promise((ok, no) => { const s = document.createElement("script"); s.src = src; s.onload = ok; s.onerror = () => no(new Error("PDF 도구를 불러오지 못했습니다.")); document.head.appendChild(s); }));
+  const PDFJS = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/";
+  async function libs() {
+    await Promise.all([loadScript(PDFJS + "pdf.min.js"), loadScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js")]);
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS + "pdf.worker.min.js";
+    return { pdfjs: window.pdfjsLib, JsPDF: window.jspdf.jsPDF };
+  }
+  async function findBoxes(blob, name, values, onWait) {
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const fd = new FormData(); fd.append("document", blob, name); fd.append("values", JSON.stringify(values));
+      let res; try { res = await fetch(`${GRADER}/mask`, { method: "POST", body: fd }); } catch (e) { throw new Error("판정 서버에 연결하지 못했습니다."); }
+      let j = {}; try { j = await res.json(); } catch (e) {}
+      if (res.status === 429 && attempt < 4) { onWait(20); await sleep(20000); continue; }
+      if (!res.ok || !j.pages) throw new Error(j.error || `서버 오류 (HTTP ${res.status})`);
+      return j;
+    }
+    throw new Error("요청이 너무 많습니다. 1분 뒤 다시 시도하세요.");
+  }
+  // 파일의 쪽을 캔버스로 (PDF는 pdf.js, 사진은 그대로)
+  async function pageCanvases(blob, pdfjs) {
+    const isPdf = /pdf/i.test(blob.type) || new Uint8Array(await blob.slice(0, 4).arrayBuffer()).join() === "37,80,68,70";
+    const list = [];
+    if (isPdf) {
+      const doc = await pdfjs.getDocument({ data: await blob.arrayBuffer() }).promise;
+      for (let i = 1; i <= doc.numPages; i++) {
+        const page = await doc.getPage(i), vp1 = page.getViewport({ scale: 1 }), vp = page.getViewport({ scale: 2 });
+        const c = document.createElement("canvas"); c.width = vp.width; c.height = vp.height;
+        await page.render({ canvasContext: c.getContext("2d"), viewport: vp }).promise;
+        list.push({ c, wPt: vp1.width, hPt: vp1.height });
+      }
+    } else {
+      const img = await createImageBitmap(blob), c = document.createElement("canvas");
+      c.width = img.width; c.height = img.height; c.getContext("2d").drawImage(img, 0, 0);
+      const s = 595 / Math.max(img.width, 1);
+      list.push({ c, wPt: 595, hPt: img.height * s });
+    }
+    return list;
+  }
+  async function makeMasked(job, btn) {
+    const j = jobs[job], st = document.querySelector(`[data-mask-st="${job}"]`);
+    const say = (t, cls = "note") => { st.innerHTML = `<p class="${cls}" style="margin:6px 0 0">${t}</p>`; };
+    btn.disabled = true;
+    try {
+      const values = exposedValues(j.out);
+      say("노출된 값의 위치를 찾는 중… (10~30초)");
+      const blob = await j.get();
+      const [found, { pdfjs, JsPDF }] = await Promise.all([findBoxes(blob, j.name, values, (s) => say(`요청이 몰려 ${s}초 기다렸다가 다시 보냅니다…`)), libs()]);
+      say("쪽을 그리고 가리는 중…");
+      const pages = await pageCanvases(blob, pdfjs);
+      let pdf = null, n = 0;
+      pages.forEach((p, i) => {
+        const g = p.c.getContext("2d"), W = p.c.width, H = p.c.height, pad = 0.004;
+        g.fillStyle = "#000";
+        ((found.pages[i] || {}).boxes || []).forEach((b) => { g.fillRect((b.x - pad) * W, (b.y - pad) * H, (b.w + 2 * pad) * W, (b.h + 2 * pad) * H); n++; });
+        const o = p.wPt > p.hPt ? "l" : "p";
+        if (!pdf) pdf = new JsPDF({ orientation: o, unit: "pt", format: [p.wPt, p.hPt] });
+        else pdf.addPage([p.wPt, p.hPt], o);
+        pdf.addImage(p.c.toDataURL("image/jpeg", 0.85), "JPEG", 0, 0, p.wPt, p.hPt);
+      });
+      const file = j.name.replace(/\.[^.]+$/, "") + "_가림.pdf";
+      pdf.save(file);
+      const miss = found.missing || [];
+      say(`${pages.length}쪽에서 ${n}곳을 가려 <b>${esc(file)}</b>로 내려받았습니다.` +
+        (miss.length ? `<br><span class="err">위치를 찾지 못해 가리지 못한 값 ${miss.length}개: ${miss.map(esc).join(", ")} — 내려받은 파일에서 직접 확인해 주세요.</span>` : " 노출된 값을 모두 찾아 가렸습니다. 발송 전 한 번 더 눈으로 확인해 주세요."));
+    } catch (e) {
+      say(`가린 PDF를 만들지 못했습니다. ${esc(e.message)} — 잠시 뒤 다시 눌러 주세요.`, "err");
+    }
+    btn.disabled = false;
+  }
+  document.addEventListener("click", (e) => { const b = e.target.closest("[data-mask]"); if (b) makeMasked(+b.dataset.mask, b); });
+
   function failHtml(r) {
     return `<p class="err"><b>판정하지 못했습니다.</b> ${esc(r.error)}</p><p><b>이렇게 해 보세요:</b> ${esc(guide(r.status, r.error))}</p>`;
   }
@@ -153,7 +237,8 @@
       return;
     }
     setStep("ok");
-    out.innerHTML = detailHtml(r.result, r.ocr, r.raw, kase);
+    jobs.push({ get: async () => blob, name, out: r.result });
+    out.innerHTML = detailHtml(r.result, r.ocr, r.raw, kase, jobs.length - 1);
   }
 
   // ---- 여러 건 한꺼번에 ----
@@ -174,7 +259,10 @@
       if (!r.res.ok) { h += `<tr><td>${esc(r.name)}</td><td colspan="${hasAns ? 4 : 3}" class="err">${esc(r.res.error)} — ${esc(guide(r.res.status, r.res.error))}</td><td><button type="button" data-retry="${i}">다시</button></td></tr>`; return; }
       const o = r.res.result, m = r.kase ? matches(r.kase, o) : null;
       h += `<tr class="${r.open ? "open" : ""}"><td>${esc(r.name)}</td><td><span class="badge ${BADGE[o.risk_level] || ""}">${esc(o.risk_level)}</span></td><td>${esc((o.detected_items || []).join(", ") || "없음")}</td><td>${esc((ACTION[o.risk_level] || "").split(" — ")[0])}</td>${hasAns ? `<td>${m ? (m.lvl && m.items && m.subj ? "✅ 일치" : "❌ 다름") : "—"}</td>` : ""}<td><button type="button" data-open="${i}">${r.open ? "접기" : "자세히"}</button></td></tr>`;
-      if (r.open) h += `<tr class="open"><td colspan="${hasAns ? 6 : 5}"><div class="result">${detailHtml(o, r.res.ocr, "", r.kase)}</div></td></tr>`;
+      if (r.open) {
+        if (r.job == null || jobs[r.job].out !== o) { jobs.push({ get: r.get, name: r.kase ? r.kase.set + ".pdf" : r.name, out: o }); r.job = jobs.length - 1; }
+        h += `<tr class="open"><td colspan="${hasAns ? 6 : 5}"><div class="result">${detailHtml(o, r.res.ocr, "", r.kase, r.job)}</div></td></tr>`;
+      }
     });
     h += `</tbody></table></div>`;
     $("batchOut").innerHTML = h;

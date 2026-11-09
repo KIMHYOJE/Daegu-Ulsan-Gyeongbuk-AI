@@ -6,15 +6,15 @@
 import { EXTRACT_SYSTEM, EXTRACT_SCHEMA } from "./_prompt.js";
 
 const API = "https://api.upstage.ai/v1";
-const MAX_BYTES = 4 * 1024 * 1024; // Vercel 요청 본문 한도(4.5MB) 안쪽
+export const MAX_BYTES = 4 * 1024 * 1024; // Vercel 요청 본문 한도(4.5MB) 안쪽
 const MODEL = process.env.MODEL || "solar-pro4";
 const LIMIT = 16, WINDOW_MS = 60_000; // IP당 1분에 16번 (인스턴스 단위, 샘플 14개 한꺼번에 판정 허용)
 const hits = new Map();
 
-const json = (body, status = 200) =>
+export const json = (body, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json; charset=utf-8" } });
 
-function sameSite(request) {
+export function sameSite(request) {
   const origin = request.headers.get("origin");
   if (!origin) return false;
   let host;
@@ -23,7 +23,7 @@ function sameSite(request) {
   return host === own || /^(localhost|127\.0\.0\.1)(:\d+)?$/.test(host);
 }
 
-function limited(ip) {
+export function limited(ip) {
   const now = Date.now();
   const list = (hits.get(ip) || []).filter((t) => now - t < WINDOW_MS);
   if (list.length >= LIMIT) { hits.set(ip, list); return true; }
