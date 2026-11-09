@@ -1,5 +1,5 @@
-// AI 판정: 파일을 Cloudflare Worker(GRADER_URL)로 보내면 Worker가 Upstage Document Parse(OCR) → Solar 판정을 수행한다.
-// Upstage 키는 Worker 비밀값에만 있다.
+// AI 판정: 파일을 Vercel 함수(GRADER_URL=/api)로 보내면 Worker가 Upstage Document Parse(OCR) → Solar 판정을 수행한다.
+// Upstage 키는 Vercel 환경변수에만 있다.
 (function () {
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -54,7 +54,7 @@
       blob = await r.blob(); name = kase.set + ".pdf";
     } else if ($("file").files.length) {
       blob = $("file").files[0]; name = blob.name;
-      if (blob.size > 10 * 1024 * 1024) { out.innerHTML = '<p class="err">10MB 이하 파일만 판정할 수 있습니다.</p>'; return; }
+      if (blob.size > 4 * 1024 * 1024) { out.innerHTML = '<p class="err">4MB 이하 파일만 판정할 수 있습니다.</p>'; return; }
     } else { out.innerHTML = '<p class="err">샘플을 고르거나 파일을 올리세요.</p>'; return; }
 
     $("aiRun").disabled = true; setStep("run");

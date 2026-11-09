@@ -3,7 +3,7 @@
 IM뱅크 지정주제 「AI 기반 금융 문서 민감 정보 자동 식별 및 위험도 등급화」 최종 제출물입니다.
 은행 서류를 밖으로 보내기 전에 가려지지 않은 민감정보를 찾아 **고위험 · 중위험 · 저위험 · 검토 필요** 4단계로 1차 판정하고, 등급별 후속 조치문을 작성하는 Upstage AI Studio 워크플로우입니다.
 
-- 소개 사이트: [`docs/index.html`](docs/index.html) (GitHub Pages: Settings → Pages → Branch `final-submission` / 폴더 `/docs`)
+- 소개 사이트: [`docs/index.html`](docs/index.html) — Vercel에 배포 (정적 파일 `docs/`, AI 판정 함수 `api/grade.js`, 환경변수 `UPSTAGE_API_KEY`)
 - 결과: 정답 데이터셋 14개 묶음 중 14개 일치 (Studio 설정 #8·#9, 위험도·노출 항목·정보 주체 3개 키 기준)
 
 ## 폴더
@@ -13,7 +13,8 @@ IM뱅크 지정주제 「AI 기반 금융 문서 민감 정보 자동 식별 및
 | `최종제출_제출물/` | 데이터셋 PDF 14개(set01~14), 정답 `answer.json`, 유형표, 설계서, 발표자료, workflow.json |
 | `mission2_build/` | 데이터셋·정답·설계서·발표자료를 만드는 스크립트, Studio 가져오기용 설정, 결과 요약 |
 | `mission2_build/forms/` | 국가법령정보센터 별지 서식 원본(빈 서식) |
-| `docs/` | 프로젝트 소개 사이트와 판정 규칙 체험 페이지 |
+| `docs/` | 프로젝트 소개 사이트, AI 판정 실행, 판정 규칙 체험 페이지 |
+| `api/` | 사이트의 AI 판정 함수 (Upstage Document Parse → Solar, Vercel Functions) |
 
 ## 데이터 안내
 

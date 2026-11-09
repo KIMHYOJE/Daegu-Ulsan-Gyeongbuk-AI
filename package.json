@@ -1,0 +1,6 @@
+{
+  "name": "yomi-risk-site",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=20" }
+}
