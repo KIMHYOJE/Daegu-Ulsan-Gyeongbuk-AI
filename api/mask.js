@@ -32,6 +32,9 @@ function findWords(words, value) {
     while (at >= 0) { for (let k = at; k < at + needle.length; k++) hit.add(owner[k]); found = true; at = hay.indexOf(needle, at + 1); }
     return found;
   };
+  // '급여 48,000,000'처럼 항목 이름 + 숫자로 뽑힌 값은 숫자만 가린다 (서식 칸 이름은 남김)
+  const labeled = String(value).match(/^[가-힣A-Za-z()·\s]+?\s*([\d][\d,.\-\s]*\d)\s*원?$/);
+  if (labeled && norm(labeled[1]).length >= 4 && mark(norm(labeled[1]))) return hit;
   if (!mark(norm(value))) {
     // OCR 차이로 전체가 안 맞으면 값 속 4자리 이상 숫자 덩어리라도 가린다 (더 가리는 쪽이 안전)
     for (const d of String(value).match(/\d{4,}/g) || []) mark(d);
