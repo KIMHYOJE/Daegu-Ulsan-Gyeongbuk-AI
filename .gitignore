@@ -10,3 +10,6 @@ __pycache__/
 ~$*
 .claude/
 mission2_build/demo_video/work/
+
+# 제출용 묶음 (최종제출_제출물/ 의 복사본)
+/요미의 코딩_최종제출.zip
