@@ -9,3 +9,4 @@ __pycache__/
 *.pyc
 ~$*
 .claude/
+mission2_build/demo_video/work/
